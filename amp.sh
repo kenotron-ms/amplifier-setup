@@ -15,7 +15,8 @@
 # 4. Launches Claude Code with workspace context
 #
 # Environment:
-#   AMP_HOME - Installation directory (default: ~/.amplifier)
+#   AMP_HOME - State directory (default: ~/.amp)
+#   AMP_AMPLIFIER_DIR - Amplifier clone directory (default: ~/amplifier)
 #
 # State files:
 #   $AMP_HOME/.amp_ready       - Marks bootstrap complete
@@ -23,7 +24,8 @@
 #   $AMP_HOME/.amp.log         - Operation log
 
 # Configuration
-AMP_HOME="${AMP_HOME:-$HOME/.amplifier}"
+AMP_HOME="${AMP_HOME:-$HOME/.amp}"
+AMP_AMPLIFIER_DIR="${AMP_AMPLIFIER_DIR:-$HOME/amplifier}"
 AMP_REPO="https://github.com/microsoft/amplifier.git"
 UPDATE_CHECK_INTERVAL=$((24 * 3600))  # 24 hours in seconds
 
@@ -100,23 +102,23 @@ _amp_check_prereqs() {
 _amp_clone() {
     echo "📦 Cloning amplifier repository..."
 
-    if [[ -d "$AMP_HOME" ]]; then
-        _amp_error "Directory already exists: $AMP_HOME" \
-            "Remove existing directory: rm -rf $AMP_HOME"
+    if [[ -d "$AMP_AMPLIFIER_DIR" ]]; then
+        _amp_error "Directory already exists: $AMP_AMPLIFIER_DIR" \
+            "Remove existing directory: rm -rf $AMP_AMPLIFIER_DIR"
     fi
 
-    if ! git clone "$AMP_REPO" "$AMP_HOME"; then
+    if ! git clone "$AMP_REPO" "$AMP_AMPLIFIER_DIR"; then
         _amp_error "Failed to clone repository" \
             "Check network connection and repository URL"
     fi
 
     # Verify critical files exist
-    if [[ ! -f "$AMP_HOME/Makefile" ]]; then
+    if [[ ! -f "$AMP_AMPLIFIER_DIR/Makefile" ]]; then
         _amp_error "Cloned repository is incomplete or corrupted" \
-            "Remove and retry: rm -rf $AMP_HOME && amp"
+            "Remove and retry: rm -rf $AMP_AMPLIFIER_DIR && amp"
     fi
 
-    _amp_log "Cloned repository to $AMP_HOME"
+    _amp_log "Cloned repository to $AMP_AMPLIFIER_DIR"
     echo "✅ Repository cloned"
 }
 
@@ -142,9 +144,9 @@ _amp_update() {
 
     echo "🔄 Checking for updates..."
 
-    cd "$AMP_HOME" || {
-        _amp_error "Failed to change to installation directory" \
-            "Check directory exists: $AMP_HOME"
+    cd "$AMP_AMPLIFIER_DIR" || {
+        _amp_error "Failed to change to amplifier directory" \
+            "Check directory exists: $AMP_AMPLIFIER_DIR"
     }
 
     # Fetch latest changes
@@ -165,7 +167,7 @@ _amp_update() {
 
         if ! git pull origin main --quiet; then
             _amp_error "Failed to pull updates" \
-                "Try manually updating: cd $AMP_HOME && git pull"
+                "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
         fi
 
         _amp_log "Updated from $local_sha to $remote_sha"
@@ -191,9 +193,9 @@ _amp_update() {
 _amp_install() {
     echo "🔧 Installing dependencies..."
 
-    cd "$AMP_HOME" || {
-        _amp_error "Failed to change to installation directory" \
-            "Check directory exists: $AMP_HOME"
+    cd "$AMP_AMPLIFIER_DIR" || {
+        _amp_error "Failed to change to amplifier directory" \
+            "Check directory exists: $AMP_AMPLIFIER_DIR"
     }
 
     if ! make install >> "$AMP_LOG" 2>&1; then
@@ -242,7 +244,7 @@ _amp_execute() {
     _amp_update
 
     # Activate virtual environment
-    local venv_activate="$AMP_HOME/.venv/bin/activate"
+    local venv_activate="$AMP_AMPLIFIER_DIR/.venv/bin/activate"
     if [[ ! -f "$venv_activate" ]]; then
         _amp_error "Virtual environment not found" \
             "Try removing $AMP_READY_FLAG and run amp again"

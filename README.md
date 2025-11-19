@@ -54,7 +54,7 @@ curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/inst
 ```
 
 This will:
-1. Download `amp.sh` to `~/.amplifier/`
+1. Download `amp.sh` to `~/.amp/`
 2. Add it to your `~/.bashrc` and `~/.zshrc`
 3. Make it available immediately in your current shell
 
@@ -64,14 +64,14 @@ This will:
 
 1. Download `amp.sh`:
 ```bash
-mkdir -p ~/.amplifier
-curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/amp.sh -o ~/.amplifier/amp.sh
-chmod +x ~/.amplifier/amp.sh
+mkdir -p ~/.amp
+curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/amp.sh -o ~/.amp/amp.sh
+chmod +x ~/.amp/amp.sh
 ```
 
 2. Add to your shell RC file (`~/.bashrc` or `~/.zshrc`):
 ```bash
-echo 'source ~/.amplifier/amp.sh' >> ~/.bashrc  # or ~/.zshrc
+echo 'source ~/.amp/amp.sh' >> ~/.bashrc  # or ~/.zshrc
 ```
 
 3. Reload your shell:
@@ -102,7 +102,7 @@ amp "analyze this code" --add-dir ../other-project
 
 On your first `amp` command, it will automatically:
 1. Check that prerequisites are installed
-2. Clone the amplifier repository to `~/.amplifier`
+2. Clone the amplifier repository to `~/amplifier`
 3. Run `make install` to set up dependencies
 4. Launch Claude Code with proper workspace context
 
@@ -140,26 +140,30 @@ This tells Claude Code:
 ### File Structure
 
 ```
-~/.amplifier/
+~/.amp/                 # State directory
 ├── amp.sh              # The amp function (installed by install.sh)
 ├── .amp_ready          # Flag: bootstrap completed
 ├── .amp_last_check     # Timestamp of last update check
-├── .amp.log            # Operation log for troubleshooting
-└── (amplifier repo)    # Cloned on first run
-    ├── .venv/          # Python virtual environment
-    ├── Makefile        # Amplifier's build system
-    └── ...
+└── .amp.log            # Operation log for troubleshooting
+
+~/amplifier/            # Amplifier repository (cloned on first run)
+├── .venv/              # Python virtual environment
+├── Makefile            # Build system
+├── amplifier/          # Amplifier modules
+└── ...
 ```
 
 ## Configuration
 
 ### Environment Variables
 
-- `AMP_HOME` - Override installation directory (default: `~/.amplifier`)
+- `AMP_HOME` - Override state directory (default: `~/.amp`)
+- `AMP_AMPLIFIER_DIR` - Override amplifier clone location (default: `~/amplifier`)
 
 Example:
 ```bash
-export AMP_HOME="$HOME/my-custom-location"
+export AMP_HOME="$HOME/.my-amp-state"
+export AMP_AMPLIFIER_DIR="$HOME/my-amplifier"
 amp
 ```
 
@@ -168,7 +172,7 @@ amp
 By default, `amp` checks for updates once per 24 hours. To force an update check:
 
 ```bash
-rm ~/.amplifier/.amp_last_check
+rm ~/.amp/.amp_last_check
 amp
 ```
 
@@ -179,7 +183,7 @@ amp
 If something goes wrong, check the log:
 
 ```bash
-tail -f ~/.amplifier/.amp.log
+tail -f ~/.amp/.amp.log
 ```
 
 ### Force Reinstall
@@ -187,7 +191,7 @@ tail -f ~/.amplifier/.amp.log
 If the amplifier installation is corrupted:
 
 ```bash
-rm ~/.amplifier/.amp_ready
+rm ~/.amp/.amp_ready
 amp  # Will trigger full bootstrap
 ```
 
@@ -196,7 +200,7 @@ amp  # Will trigger full bootstrap
 To start from scratch:
 
 ```bash
-rm -rf ~/.amplifier
+rm -rf ~/.amp ~/amplifier
 amp  # Will re-clone and install everything
 ```
 
@@ -216,7 +220,7 @@ Install the missing prerequisites:
 The installation may have been interrupted:
 
 ```bash
-rm ~/.amplifier/.amp_ready
+rm ~/.amp/.amp_ready
 amp  # Will retry installation
 ```
 
@@ -225,7 +229,7 @@ amp  # Will retry installation
 Network issue or local changes in amplifier repo:
 
 ```bash
-cd ~/.amplifier
+cd ~/amplifier
 git status  # Check for local changes
 git reset --hard origin/main  # Reset to clean state
 ```
@@ -241,8 +245,8 @@ sed -i.bak '/source.*amp.sh/d' ~/.bashrc
 sed -i.bak '/# Amplifier (amp command)/d' ~/.zshrc
 sed -i.bak '/source.*amp.sh/d' ~/.zshrc
 
-# Remove installation directory
-rm -rf ~/.amplifier
+# Remove state and amplifier directories
+rm -rf ~/.amp ~/amplifier
 ```
 
 ## Platform Support
