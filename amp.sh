@@ -103,12 +103,6 @@ _amp_check_prereqs() {
 _amp_clone() {
     echo "📦 Cloning amplifier repository..."
 
-    if [[ -d "$AMP_AMPLIFIER_DIR" ]]; then
-        _amp_error "Directory already exists: $AMP_AMPLIFIER_DIR" \
-            "Remove existing directory: rm -rf $AMP_AMPLIFIER_DIR"
-        return 1
-    fi
-
     if ! git clone "$AMP_REPO" "$AMP_AMPLIFIER_DIR"; then
         _amp_error "Failed to clone repository" \
             "Check network connection and repository URL"
@@ -231,8 +225,13 @@ _amp_bootstrap() {
     # Check prerequisites
     _amp_check_prereqs || return 1
 
-    # Clone repository
-    _amp_clone || return 1
+    # Clone repository if it doesn't exist
+    if [[ ! -d "$AMP_AMPLIFIER_DIR" ]]; then
+        _amp_clone || return 1
+    else
+        echo "📦 Amplifier already exists at $AMP_AMPLIFIER_DIR"
+        _amp_log "Using existing amplifier installation"
+    fi
 
     # Install dependencies
     _amp_install || return 1
