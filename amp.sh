@@ -1,0 +1,294 @@
+#!/usr/bin/env bash
+# amp.sh - Amplifier wrapper script
+#
+# Usage:
+#   Source this file in your ~/.bashrc or ~/.zshrc:
+#     source ~/.amplifier/amp.sh
+#
+#   Then run:
+#     amp [claude-arguments...]
+#
+# This script:
+# 1. Bootstraps the amplifier environment on first run (clone, install)
+# 2. Checks for updates daily
+# 3. Activates the virtual environment
+# 4. Launches Claude Code with workspace context
+#
+# Environment:
+#   AMP_HOME - Installation directory (default: ~/.amplifier)
+#
+# State files:
+#   $AMP_HOME/.amp_ready       - Marks bootstrap complete
+#   $AMP_HOME/.amp_last_check  - Timestamp of last update check
+#   $AMP_HOME/.amp.log         - Operation log
+
+# Configuration
+AMP_HOME="${AMP_HOME:-$HOME/.amplifier}"
+AMP_REPO="https://github.com/microsoft/amplifier.git"
+UPDATE_CHECK_INTERVAL=$((24 * 3600))  # 24 hours in seconds
+
+# State files
+AMP_READY_FLAG="$AMP_HOME/.amp_ready"
+AMP_LAST_CHECK="$AMP_HOME/.amp_last_check"
+AMP_LOG="$AMP_HOME/.amp.log"
+
+# ============================================================================
+# Logging
+# ============================================================================
+
+_amp_log() {
+    local message="$1"
+    echo "[$(date -u +"%Y-%m-%d %H:%M:%S UTC")] $message" >> "$AMP_LOG"
+}
+
+# ============================================================================
+# Error Handling
+# ============================================================================
+
+_amp_error() {
+    local message="$1"
+    local suggestion="${2:-}"
+
+    echo "❌ Error: $message" >&2
+    if [[ -n "$suggestion" ]]; then
+        echo "💡 Suggestion: $suggestion" >&2
+    fi
+
+    _amp_log "ERROR: $message"
+    exit 1
+}
+
+# ============================================================================
+# Prerequisite Checks
+# ============================================================================
+
+_amp_check_prereqs() {
+    local missing=()
+
+    if ! command -v git &> /dev/null; then
+        missing+=("git")
+    fi
+
+    if ! command -v make &> /dev/null; then
+        missing+=("make")
+    fi
+
+    if ! command -v python3 &> /dev/null; then
+        missing+=("python3")
+    fi
+
+    if ! command -v uv &> /dev/null; then
+        missing+=("uv")
+    fi
+
+    if ! command -v claude &> /dev/null; then
+        missing+=("claude")
+    fi
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        _amp_error "Missing required tools: ${missing[*]}" \
+            "Install missing tools:\n  - git: https://git-scm.com/downloads\n  - make: Install via system package manager\n  - python3: https://www.python.org/downloads/\n  - uv: https://docs.astral.sh/uv/getting-started/installation/\n  - claude: https://docs.anthropic.com/en/docs/claude-code/install"
+    fi
+
+    _amp_log "Prerequisites check passed"
+}
+
+# ============================================================================
+# Clone
+# ============================================================================
+
+_amp_clone() {
+    echo "📦 Cloning amplifier repository..."
+
+    if [[ -d "$AMP_HOME" ]]; then
+        _amp_error "Directory already exists: $AMP_HOME" \
+            "Remove existing directory: rm -rf $AMP_HOME"
+    fi
+
+    if ! git clone "$AMP_REPO" "$AMP_HOME"; then
+        _amp_error "Failed to clone repository" \
+            "Check network connection and repository URL"
+    fi
+
+    # Verify critical files exist
+    if [[ ! -f "$AMP_HOME/Makefile" ]]; then
+        _amp_error "Cloned repository is incomplete or corrupted" \
+            "Remove and retry: rm -rf $AMP_HOME && amp"
+    fi
+
+    _amp_log "Cloned repository to $AMP_HOME"
+    echo "✅ Repository cloned"
+}
+
+# ============================================================================
+# Update
+# ============================================================================
+
+_amp_update() {
+    local current_time
+    current_time=$(date +%s)
+
+    # Check if update check is needed
+    if [[ -f "$AMP_LAST_CHECK" ]]; then
+        local last_check
+        last_check=$(cat "$AMP_LAST_CHECK")
+        local time_diff=$((current_time - last_check))
+
+        if [[ $time_diff -lt $UPDATE_CHECK_INTERVAL ]]; then
+            # No update check needed yet
+            return 0
+        fi
+    fi
+
+    echo "🔄 Checking for updates..."
+
+    cd "$AMP_HOME" || {
+        _amp_error "Failed to change to installation directory" \
+            "Check directory exists: $AMP_HOME"
+    }
+
+    # Fetch latest changes
+    if ! git fetch origin main --quiet 2>&1; then
+        _amp_log "Warning: Failed to fetch updates"
+        echo "$current_time" > "$AMP_LAST_CHECK"
+        return 0
+    fi
+
+    # Check if update is available
+    local local_sha
+    local remote_sha
+    local_sha=$(git rev-parse HEAD)
+    remote_sha=$(git rev-parse origin/main)
+
+    if [[ "$local_sha" != "$remote_sha" ]]; then
+        echo "📥 Updates available, pulling changes..."
+
+        if ! git pull origin main --quiet; then
+            _amp_error "Failed to pull updates" \
+                "Try manually updating: cd $AMP_HOME && git pull"
+        fi
+
+        _amp_log "Updated from $local_sha to $remote_sha"
+
+        # Re-install after update
+        echo "🔧 Reinstalling dependencies..."
+        if ! make install >> "$AMP_LOG" 2>&1; then
+            _amp_error "Failed to reinstall after update" \
+                "Check log: $AMP_LOG"
+        fi
+
+        echo "✅ Updated and reinstalled"
+    fi
+
+    # Update last check timestamp
+    echo "$current_time" > "$AMP_LAST_CHECK"
+}
+
+# ============================================================================
+# Install
+# ============================================================================
+
+_amp_install() {
+    echo "🔧 Installing dependencies..."
+
+    cd "$AMP_HOME" || {
+        _amp_error "Failed to change to installation directory" \
+            "Check directory exists: $AMP_HOME"
+    }
+
+    if ! make install >> "$AMP_LOG" 2>&1; then
+        _amp_error "Installation failed" \
+            "Check log for details: $AMP_LOG"
+    fi
+
+    _amp_log "Installation completed"
+    echo "✅ Dependencies installed"
+}
+
+# ============================================================================
+# Bootstrap
+# ============================================================================
+
+_amp_bootstrap() {
+    echo "🚀 Bootstrapping amplifier environment..."
+
+    # Create log directory
+    mkdir -p "$(dirname "$AMP_LOG")"
+
+    _amp_log "Bootstrap started"
+
+    # Check prerequisites
+    _amp_check_prereqs
+
+    # Clone repository
+    _amp_clone
+
+    # Install dependencies
+    _amp_install
+
+    # Mark as ready
+    touch "$AMP_READY_FLAG"
+    _amp_log "Bootstrap completed"
+
+    echo "✅ Amplifier environment ready"
+}
+
+# ============================================================================
+# Execution
+# ============================================================================
+
+_amp_execute() {
+    # Check for updates (once per day)
+    _amp_update
+
+    # Activate virtual environment
+    local venv_activate="$AMP_HOME/.venv/bin/activate"
+    if [[ ! -f "$venv_activate" ]]; then
+        _amp_error "Virtual environment not found" \
+            "Try removing $AMP_READY_FLAG and run amp again"
+    fi
+
+    # shellcheck disable=SC1090
+    source "$venv_activate"
+
+    # Generate workspace message
+    local workspace_dir
+    workspace_dir="$(pwd)"
+
+    # Validate workspace directory
+    if [[ ! -d "$workspace_dir" ]]; then
+        _amp_error "Current directory does not exist" \
+            "Run amp from a valid directory"
+    fi
+
+    local project_name
+    project_name="$(basename "$workspace_dir")"
+
+    local workspace_message="I'm working on the $project_name project. The project is located at $workspace_dir. The ~/amplifier directory is just the dev environment.
+
+Please read @$workspace_dir/CLAUDE.md for project-specific guidance.
+
+Whenever we execute any tools, we should assume $workspace_dir is the root directory."
+
+    _amp_log "Launching claude from $workspace_dir"
+
+    # Execute claude with workspace context as first message, then pass through all user arguments
+    claude "$workspace_message" "$@"
+}
+
+# ============================================================================
+# Main Entry Point
+# ============================================================================
+
+amp() {
+    # Check if bootstrap is needed
+    if [[ ! -f "$AMP_READY_FLAG" ]]; then
+        _amp_bootstrap
+    fi
+
+    # Execute claude
+    _amp_execute "$@"
+}
+
+# Function is defined and ready to use
+# Source this file in your shell RC file to enable the amp command

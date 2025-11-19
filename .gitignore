@@ -1,0 +1,21 @@
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Test directories
+test_install/
+.test/
+
+# Backup files
+*.bak
