@@ -29,6 +29,14 @@ AMP_HOME="${AMP_HOME:-$HOME/.amp}"
 AMP_SCRIPT="$AMP_HOME/amp.sh"
 DOWNLOAD_URL="https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp.sh"
 
+# Clean up old versions if they exist
+if [[ -f "$AMP_SCRIPT" ]]; then
+    echo "🧹 Cleaning up old installation..."
+    rm -f "$AMP_SCRIPT" "$AMP_HOME/amp-workspace.sh"
+    echo "✅ Old version removed"
+    echo ""
+fi
+
 # Create installation directory
 echo "📁 Creating installation directory..."
 mkdir -p "$AMP_HOME"

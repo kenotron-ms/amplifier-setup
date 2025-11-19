@@ -57,7 +57,7 @@ _amp_error() {
     fi
 
     _amp_log "ERROR: $message"
-    exit 1
+    return 1
 }
 
 # ============================================================================
@@ -90,6 +90,7 @@ _amp_check_prereqs() {
     if [[ ${#missing[@]} -gt 0 ]]; then
         _amp_error "Missing required tools: ${missing[*]}" \
             "Install missing tools:\n  - git: https://git-scm.com/downloads\n  - make: Install via system package manager\n  - python3: https://www.python.org/downloads/\n  - uv: https://docs.astral.sh/uv/getting-started/installation/\n  - claude: https://docs.anthropic.com/en/docs/claude-code/install"
+        return 1
     fi
 
     _amp_log "Prerequisites check passed"
@@ -105,17 +106,20 @@ _amp_clone() {
     if [[ -d "$AMP_AMPLIFIER_DIR" ]]; then
         _amp_error "Directory already exists: $AMP_AMPLIFIER_DIR" \
             "Remove existing directory: rm -rf $AMP_AMPLIFIER_DIR"
+        return 1
     fi
 
     if ! git clone "$AMP_REPO" "$AMP_AMPLIFIER_DIR"; then
         _amp_error "Failed to clone repository" \
             "Check network connection and repository URL"
+        return 1
     fi
 
     # Verify critical files exist
     if [[ ! -f "$AMP_AMPLIFIER_DIR/Makefile" ]]; then
         _amp_error "Cloned repository is incomplete or corrupted" \
             "Remove and retry: rm -rf $AMP_AMPLIFIER_DIR && amp"
+        return 1
     fi
 
     _amp_log "Cloned repository to $AMP_AMPLIFIER_DIR"
@@ -147,6 +151,7 @@ _amp_update() {
     cd "$AMP_AMPLIFIER_DIR" || {
         _amp_error "Failed to change to amplifier directory" \
             "Check directory exists: $AMP_AMPLIFIER_DIR"
+        return 1
     }
 
     # Fetch latest changes
@@ -168,6 +173,7 @@ _amp_update() {
         if ! git pull origin main --quiet; then
             _amp_error "Failed to pull updates" \
                 "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
+            return 1
         fi
 
         _amp_log "Updated from $local_sha to $remote_sha"
@@ -177,6 +183,7 @@ _amp_update() {
         if ! make install >> "$AMP_LOG" 2>&1; then
             _amp_error "Failed to reinstall after update" \
                 "Check log: $AMP_LOG"
+            return 1
         fi
 
         echo "✅ Updated and reinstalled"
@@ -196,11 +203,13 @@ _amp_install() {
     cd "$AMP_AMPLIFIER_DIR" || {
         _amp_error "Failed to change to amplifier directory" \
             "Check directory exists: $AMP_AMPLIFIER_DIR"
+        return 1
     }
 
     if ! make install >> "$AMP_LOG" 2>&1; then
         _amp_error "Installation failed" \
             "Check log for details: $AMP_LOG"
+        return 1
     fi
 
     _amp_log "Installation completed"
@@ -220,13 +229,13 @@ _amp_bootstrap() {
     _amp_log "Bootstrap started"
 
     # Check prerequisites
-    _amp_check_prereqs
+    _amp_check_prereqs || return 1
 
     # Clone repository
-    _amp_clone
+    _amp_clone || return 1
 
     # Install dependencies
-    _amp_install
+    _amp_install || return 1
 
     # Mark as ready
     touch "$AMP_READY_FLAG"
@@ -257,6 +266,7 @@ _amp_execute() {
     if [[ -z "$worktree_path" ]] || [[ ! -d "$worktree_path" ]]; then
         _amp_error "Failed to create/access workspace worktree" \
             "Check log for details: $AMP_LOG"
+        return 1
     fi
 
     # Activate virtual environment from the worktree
@@ -264,6 +274,7 @@ _amp_execute() {
     if [[ ! -f "$venv_activate" ]]; then
         _amp_error "Virtual environment not found in worktree" \
             "Try running: cd $worktree_path && make install"
+        return 1
     fi
 
     # shellcheck disable=SC1090
@@ -277,6 +288,7 @@ _amp_execute() {
     if [[ ! -d "$workspace_dir" ]]; then
         _amp_error "Current directory does not exist" \
             "Run amp from a valid directory"
+        return 1
     fi
 
     local project_name
@@ -367,7 +379,7 @@ amp() {
 
     # Check if bootstrap is needed
     if [[ ! -f "$AMP_READY_FLAG" ]]; then
-        _amp_bootstrap
+        _amp_bootstrap || return 1
     fi
 
     # Execute claude
