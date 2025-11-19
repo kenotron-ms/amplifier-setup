@@ -47,16 +47,10 @@ Before installing `amp`, ensure you have:
 gh repo view microsoft/amplifier-setup --raw install.sh | bash
 ```
 
-Or using curl (once published to GitHub):
+Or using curl:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/install.sh | bash
-```
-
-Or run locally from this repository:
-
-```bash
-bash install.sh
 ```
 
 This will:
