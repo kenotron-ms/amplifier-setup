@@ -25,7 +25,7 @@ echo ""
 # Configuration
 AMP_HOME="${AMP_HOME:-$HOME/.amp}"
 AMP_SCRIPT="$AMP_HOME/amp.sh"
-DOWNLOAD_URL="https://raw.githubusercontent.com/microsoft/amplifier-setup/main/amp.sh"
+DOWNLOAD_URL="https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp.sh"
 
 # Create installation directory
 echo "📁 Creating installation directory..."
@@ -34,38 +34,49 @@ mkdir -p "$AMP_HOME"
 # Check if we're running from a local clone (amp.sh in same directory as install.sh)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_AMP_SCRIPT="$SCRIPT_DIR/amp.sh"
+LOCAL_WORKSPACE_SCRIPT="$SCRIPT_DIR/amp-workspace.sh"
 
 if [[ -f "$LOCAL_AMP_SCRIPT" ]]; then
     # Use local copy
-    echo "📦 Using local amp.sh from repository..."
+    echo "📦 Using local scripts from repository..."
     if ! cp "$LOCAL_AMP_SCRIPT" "$AMP_SCRIPT"; then
         echo -e "${RED}❌ Failed to copy amp.sh${NC}" >&2
         exit 1
     fi
+    if [[ -f "$LOCAL_WORKSPACE_SCRIPT" ]]; then
+        if ! cp "$LOCAL_WORKSPACE_SCRIPT" "$AMP_HOME/amp-workspace.sh"; then
+            echo -e "${RED}❌ Failed to copy amp-workspace.sh${NC}" >&2
+            exit 1
+        fi
+    fi
     chmod +x "$AMP_SCRIPT"
-    echo "✅ Installed local amp.sh"
+    chmod +x "$AMP_HOME/amp-workspace.sh"
+    echo "✅ Installed local scripts"
 else
     # Download from GitHub
-    echo "📥 Downloading amp.sh from GitHub..."
+    echo "📥 Downloading scripts from GitHub..."
     if command -v curl &> /dev/null; then
         if ! curl -fsSL "$DOWNLOAD_URL" -o "$AMP_SCRIPT"; then
             echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
             echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
             exit 1
         fi
+        curl -fsSL "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -o "$AMP_HOME/amp-workspace.sh" || true
     elif command -v wget &> /dev/null; then
         if ! wget -q "$DOWNLOAD_URL" -O "$AMP_SCRIPT"; then
             echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
             echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
             exit 1
         fi
+        wget -q "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -O "$AMP_HOME/amp-workspace.sh" || true
     else
         echo -e "${RED}❌ Neither curl nor wget found${NC}" >&2
         echo -e "${YELLOW}💡 Install curl or wget and try again${NC}" >&2
         exit 1
     fi
     chmod +x "$AMP_SCRIPT"
-    echo "✅ Downloaded amp.sh"
+    chmod +x "$AMP_HOME/amp-workspace.sh"
+    echo "✅ Downloaded scripts"
 fi
 
 # Add to shell RC files
@@ -124,11 +135,11 @@ echo ""
 echo "💡 Notes:"
 echo "  • On first run, amp will automatically:"
 echo "    - Check prerequisites (git, make, python3, uv, claude)"
-echo "    - Clone amplifier repository to ~/amplifier"
+echo "    - Clone amplifier repository to ~/.amp/main"
+echo "    - Create a workspace worktree for your project"
 echo "    - Install dependencies"
 echo "  • Updates are checked once per 24 hours"
-echo "  • State files stored in: $AMP_HOME"
-echo "  • Amplifier cloned to: ~/amplifier"
+echo "  • Each project gets its own isolated worktree in ~/.amp/w/"
 echo ""
 echo "🎯 Try it now:"
 echo "  amp"

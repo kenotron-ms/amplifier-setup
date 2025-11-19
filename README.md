@@ -44,13 +44,13 @@ Before installing `amp`, ensure you have:
 **Copy and paste this into your terminal:**
 
 ```bash
-gh repo view microsoft/amplifier-setup --raw install.sh | bash
+gh repo view kenotron/amplifier-setup --raw install.sh | bash
 ```
 
 Or using curl:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash
 ```
 
 This will:
@@ -65,8 +65,9 @@ This will:
 1. Download `amp.sh`:
 ```bash
 mkdir -p ~/.amp
-curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/amp.sh -o ~/.amp/amp.sh
-chmod +x ~/.amp/amp.sh
+curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp.sh -o ~/.amp/amp.sh
+curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh -o ~/.amp/amp-workspace.sh
+chmod +x ~/.amp/amp.sh ~/.amp/amp-workspace.sh
 ```
 
 2. Add to your shell RC file (`~/.bashrc` or `~/.zshrc`):
@@ -86,7 +87,7 @@ source ~/.bashrc  # or source ~/.zshrc
 Use `amp` exactly like you would use `claude`:
 
 ```bash
-# Start Claude Code in current directory
+# Start Claude Code in current directory (creates workspace worktree if needed)
 amp
 
 # Run with a prompt
@@ -98,13 +99,28 @@ amp --model opus
 amp "analyze this code" --add-dir ../other-project
 ```
 
+### Workspace Management
+
+```bash
+# List all workspace worktrees
+amp workspace list
+
+# Show info about current workspace
+amp workspace info
+
+# Remove a workspace worktree
+amp workspace remove
+amp workspace remove /path/to/project
+```
+
 ### First Run
 
 On your first `amp` command, it will automatically:
 1. Check that prerequisites are installed
-2. Clone the amplifier repository to `~/amplifier`
+2. Clone the amplifier repository to `~/.amp/main`
 3. Run `make install` to set up dependencies
-4. Launch Claude Code with proper workspace context
+4. Create a workspace worktree for your current directory
+5. Launch Claude Code with proper workspace context
 
 This takes about 2-5 minutes depending on your network speed.
 
@@ -140,30 +156,48 @@ This tells Claude Code:
 ### File Structure
 
 ```
-~/.amp/                 # State directory
-├── amp.sh              # The amp function (installed by install.sh)
-├── .amp_ready          # Flag: bootstrap completed
-├── .amp_last_check     # Timestamp of last update check
-└── .amp.log            # Operation log for troubleshooting
+~/.amp/                          # State directory
+├── amp.sh                       # The amp command (installed by install.sh)
+├── amp-workspace.sh             # Workspace worktree management
+├── .amp_ready                   # Flag: bootstrap completed
+├── .amp_last_check              # Timestamp of last update check
+├── .amp.log                     # Operation log
+└── w/                           # Workspace worktrees
+    ├── Users-ken-projects-foo/  # Worktree for /Users/ken/projects/foo
+    │   ├── .git                 # Git worktree metadata
+    │   ├── .venv/               # Isolated Python environment
+    │   ├── ai_working/          # Project-specific AI work
+    │   ├── .data/               # Project-specific data
+    │   ├── amplifier/           # Amplifier modules
+    │   └── Makefile             # Full amplifier functionality
+    └── Users-ken-workspace-bar/ # Worktree for /Users/ken/workspace/bar
+        └── (same structure)
 
-~/amplifier/            # Amplifier repository (cloned on first run)
-├── .venv/              # Python virtual environment
-├── Makefile            # Build system
-├── amplifier/          # Amplifier modules
-└── ...
+~/.amp/main/                     # Main amplifier repository (git worktree parent)
+├── .venv/                       # Main virtual environment
+├── Makefile                     # Build system
+└── amplifier/                   # Amplifier modules
 ```
+
+**Key Concept**: Each project directory gets its own isolated amplifier worktree in `~/.amp/w/`. This provides complete isolation of:
+- Python dependencies (.venv)
+- AI working files (ai_working/)
+- Data files (.data/)
+- Git branches (can be on different branches)
+
+The main amplifier repository at `~/.amp/main` serves as the parent for all workspace worktrees.
 
 ## Configuration
 
 ### Environment Variables
 
 - `AMP_HOME` - Override state directory (default: `~/.amp`)
-- `AMP_AMPLIFIER_DIR` - Override amplifier clone location (default: `~/amplifier`)
+- `AMP_AMPLIFIER_DIR` - Override amplifier clone location (default: `~/.amp/main`)
 
 Example:
 ```bash
-export AMP_HOME="$HOME/.my-amp-state"
-export AMP_AMPLIFIER_DIR="$HOME/my-amplifier"
+export AMP_HOME="$HOME/.my-amp"
+export AMP_AMPLIFIER_DIR="$HOME/.my-amp/main"
 amp
 ```
 
@@ -200,7 +234,7 @@ amp  # Will trigger full bootstrap
 To start from scratch:
 
 ```bash
-rm -rf ~/.amp ~/amplifier
+rm -rf ~/.amp
 amp  # Will re-clone and install everything
 ```
 
@@ -229,7 +263,7 @@ amp  # Will retry installation
 Network issue or local changes in amplifier repo:
 
 ```bash
-cd ~/amplifier
+cd ~/.amp/main
 git status  # Check for local changes
 git reset --hard origin/main  # Reset to clean state
 ```
@@ -245,8 +279,8 @@ sed -i.bak '/source.*amp.sh/d' ~/.bashrc
 sed -i.bak '/# Amplifier (amp command)/d' ~/.zshrc
 sed -i.bak '/source.*amp.sh/d' ~/.zshrc
 
-# Remove state and amplifier directories
-rm -rf ~/.amp ~/amplifier
+# Remove all amp directories (includes main repo and all worktrees)
+rm -rf ~/.amp
 ```
 
 ## Platform Support
@@ -257,7 +291,7 @@ rm -rf ~/.amp ~/amplifier
 
 ## Contributing
 
-See the [amplifier-setup repository](https://github.com/microsoft/amplifier-setup) for contribution guidelines.
+See the [amplifier-setup repository](https://github.com/kenotron/amplifier-setup) for contribution guidelines.
 
 ## License
 

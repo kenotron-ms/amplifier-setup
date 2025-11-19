@@ -16,7 +16,7 @@
 #
 # Environment:
 #   AMP_HOME - State directory (default: ~/.amp)
-#   AMP_AMPLIFIER_DIR - Amplifier clone directory (default: ~/amplifier)
+#   AMP_AMPLIFIER_DIR - Amplifier clone directory (default: ~/.amp/main)
 #
 # State files:
 #   $AMP_HOME/.amp_ready       - Marks bootstrap complete
@@ -25,7 +25,7 @@
 
 # Configuration
 AMP_HOME="${AMP_HOME:-$HOME/.amp}"
-AMP_AMPLIFIER_DIR="${AMP_AMPLIFIER_DIR:-$HOME/amplifier}"
+AMP_AMPLIFIER_DIR="${AMP_AMPLIFIER_DIR:-$HOME/.amp/main}"
 AMP_REPO="https://github.com/microsoft/amplifier.git"
 UPDATE_CHECK_INTERVAL=$((24 * 3600))  # 24 hours in seconds
 
@@ -243,11 +243,27 @@ _amp_execute() {
     # Check for updates (once per day)
     _amp_update
 
-    # Activate virtual environment
-    local venv_activate="$AMP_AMPLIFIER_DIR/.venv/bin/activate"
+    # Source workspace functions
+    local workspace_script="$(dirname "${BASH_SOURCE[0]}")/amp-workspace.sh"
+    if [[ -f "$workspace_script" ]]; then
+        # shellcheck disable=SC1090
+        source "$workspace_script"
+    fi
+
+    # Get or create workspace worktree for current directory
+    local worktree_path
+    worktree_path="$(_amp_get_or_create_worktree)"
+
+    if [[ -z "$worktree_path" ]] || [[ ! -d "$worktree_path" ]]; then
+        _amp_error "Failed to create/access workspace worktree" \
+            "Check log for details: $AMP_LOG"
+    fi
+
+    # Activate virtual environment from the worktree
+    local venv_activate="$worktree_path/.venv/bin/activate"
     if [[ ! -f "$venv_activate" ]]; then
-        _amp_error "Virtual environment not found" \
-            "Try removing $AMP_READY_FLAG and run amp again"
+        _amp_error "Virtual environment not found in worktree" \
+            "Try running: cd $worktree_path && make install"
     fi
 
     # shellcheck disable=SC1090
@@ -272,7 +288,7 @@ Please read @$workspace_dir/CLAUDE.md for project-specific guidance.
 
 Whenever we execute any tools, we should assume $workspace_dir is the root directory."
 
-    _amp_log "Launching claude from $workspace_dir"
+    _amp_log "Launching claude from $workspace_dir using worktree $worktree_path"
 
     # Execute claude with workspace context as first message, then pass through all user arguments
     claude "$workspace_message" "$@"
