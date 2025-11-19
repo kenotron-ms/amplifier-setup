@@ -31,29 +31,42 @@ DOWNLOAD_URL="https://raw.githubusercontent.com/microsoft/amplifier-setup/main/a
 echo "📁 Creating installation directory..."
 mkdir -p "$AMP_HOME"
 
-# Download amp.sh
-echo "📥 Downloading amp.sh..."
-if command -v curl &> /dev/null; then
-    if ! curl -fsSL "$DOWNLOAD_URL" -o "$AMP_SCRIPT"; then
-        echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
-        echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
-        exit 1
-    fi
-elif command -v wget &> /dev/null; then
-    if ! wget -q "$DOWNLOAD_URL" -O "$AMP_SCRIPT"; then
-        echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
-        echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
-        exit 1
-    fi
-else
-    echo -e "${RED}❌ Neither curl nor wget found${NC}" >&2
-    echo -e "${YELLOW}💡 Install curl or wget and try again${NC}" >&2
-    exit 1
-fi
+# Check if we're running from a local clone (amp.sh in same directory as install.sh)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_AMP_SCRIPT="$SCRIPT_DIR/amp.sh"
 
-# Make executable
-chmod +x "$AMP_SCRIPT"
-echo "✅ Downloaded amp.sh"
+if [[ -f "$LOCAL_AMP_SCRIPT" ]]; then
+    # Use local copy
+    echo "📦 Using local amp.sh from repository..."
+    if ! cp "$LOCAL_AMP_SCRIPT" "$AMP_SCRIPT"; then
+        echo -e "${RED}❌ Failed to copy amp.sh${NC}" >&2
+        exit 1
+    fi
+    chmod +x "$AMP_SCRIPT"
+    echo "✅ Installed local amp.sh"
+else
+    # Download from GitHub
+    echo "📥 Downloading amp.sh from GitHub..."
+    if command -v curl &> /dev/null; then
+        if ! curl -fsSL "$DOWNLOAD_URL" -o "$AMP_SCRIPT"; then
+            echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
+            echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
+            exit 1
+        fi
+    elif command -v wget &> /dev/null; then
+        if ! wget -q "$DOWNLOAD_URL" -O "$AMP_SCRIPT"; then
+            echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
+            echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
+            exit 1
+        fi
+    else
+        echo -e "${RED}❌ Neither curl nor wget found${NC}" >&2
+        echo -e "${YELLOW}💡 Install curl or wget and try again${NC}" >&2
+        exit 1
+    fi
+    chmod +x "$AMP_SCRIPT"
+    echo "✅ Downloaded amp.sh"
+fi
 
 # Add to shell RC files
 echo ""

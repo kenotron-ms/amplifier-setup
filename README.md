@@ -41,14 +41,30 @@ Before installing `amp`, ensure you have:
 
 ### Quick Install
 
+**Copy and paste this into your terminal:**
+
+```bash
+gh repo view microsoft/amplifier-setup --raw install.sh | bash
+```
+
+Or using curl (once published to GitHub):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/install.sh | bash
+```
+
+Or run locally from this repository:
+
+```bash
+bash install.sh
 ```
 
 This will:
 1. Download `amp.sh` to `~/.amplifier/`
 2. Add it to your `~/.bashrc` and `~/.zshrc`
 3. Make it available immediately in your current shell
+
+**That's it!** After installation completes, just type `amp` to get started.
 
 ### Manual Install
 
