@@ -101,6 +101,21 @@ fi
 echo ""
 echo "🔧 Configuring shell..."
 
+# Clean up old references first (from previous versions)
+for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    if [[ -f "$RC_FILE" ]]; then
+        # Remove old .amplifier references
+        if grep -q "\.amplifier" "$RC_FILE" 2>/dev/null; then
+            echo "  🧹 Removing old .amplifier references from $(basename "$RC_FILE")..."
+            sed -i.bak '/\.amplifier/d' "$RC_FILE"
+            rm -f "${RC_FILE}.bak"
+        fi
+        # Remove old amp comment lines
+        sed -i.bak '/# Amplifier (amp command)/d' "$RC_FILE" 2>/dev/null || true
+        rm -f "${RC_FILE}.bak"
+    fi
+done
+
 SOURCE_LINE="source $AMP_SCRIPT"
 COMMENT_LINE="# Amplifier (amp command)"
 
