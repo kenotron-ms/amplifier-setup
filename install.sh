@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# install.sh - Install the amp command
+# install.sh - Install/Update the amp command
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/microsoft/amplifier-setup/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash
 #
-# This script:
-# 1. Downloads amp.sh
-# 2. Installs it to ~/.amplifier/amp.sh
-# 3. Adds source line to shell RC files
-# 4. Sources it for current session
+# This script is idempotent - safe to run multiple times to get latest version.
+#
+# What it does:
+# 1. Downloads latest amp.sh and amp-workspace.sh from GitHub
+# 2. Installs them to ~/.amp/
+# 3. Adds source line to shell RC files (if not already present)
+# 4. Sources for current session
 
 set -e
 
@@ -37,46 +39,54 @@ LOCAL_AMP_SCRIPT="$SCRIPT_DIR/amp.sh"
 LOCAL_WORKSPACE_SCRIPT="$SCRIPT_DIR/amp-workspace.sh"
 
 if [[ -f "$LOCAL_AMP_SCRIPT" ]]; then
-    # Use local copy
+    # Use local copy (development mode)
     echo "📦 Using local scripts from repository..."
-    if ! cp "$LOCAL_AMP_SCRIPT" "$AMP_SCRIPT"; then
-        echo -e "${RED}❌ Failed to copy amp.sh${NC}" >&2
-        exit 1
-    fi
+    cp -f "$LOCAL_AMP_SCRIPT" "$AMP_SCRIPT"
     if [[ -f "$LOCAL_WORKSPACE_SCRIPT" ]]; then
-        if ! cp "$LOCAL_WORKSPACE_SCRIPT" "$AMP_HOME/amp-workspace.sh"; then
-            echo -e "${RED}❌ Failed to copy amp-workspace.sh${NC}" >&2
-            exit 1
-        fi
+        cp -f "$LOCAL_WORKSPACE_SCRIPT" "$AMP_HOME/amp-workspace.sh"
     fi
-    chmod +x "$AMP_SCRIPT"
-    chmod +x "$AMP_HOME/amp-workspace.sh"
+    chmod +x "$AMP_SCRIPT" "$AMP_HOME/amp-workspace.sh"
     echo "✅ Installed local scripts"
 else
-    # Download from GitHub
-    echo "📥 Downloading scripts from GitHub..."
+    # Always download latest from GitHub (idempotent updates)
+    echo "📥 Downloading latest scripts from GitHub..."
+
     if command -v curl &> /dev/null; then
-        if ! curl -fsSL "$DOWNLOAD_URL" -o "$AMP_SCRIPT"; then
+        # Download amp.sh
+        if ! curl -fsSL "$DOWNLOAD_URL" -o "$AMP_SCRIPT.tmp"; then
             echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
             echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
             exit 1
         fi
-        curl -fsSL "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -o "$AMP_HOME/amp-workspace.sh" || true
+        mv "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
+
+        # Download amp-workspace.sh
+        if curl -fsSL "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -o "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
+            mv "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
+        fi
+
     elif command -v wget &> /dev/null; then
-        if ! wget -q "$DOWNLOAD_URL" -O "$AMP_SCRIPT"; then
+        # Download amp.sh
+        if ! wget -q "$DOWNLOAD_URL" -O "$AMP_SCRIPT.tmp"; then
             echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
             echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
             exit 1
         fi
-        wget -q "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -O "$AMP_HOME/amp-workspace.sh" || true
+        mv "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
+
+        # Download amp-workspace.sh
+        if wget -q "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -O "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
+            mv "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
+        fi
+
     else
         echo -e "${RED}❌ Neither curl nor wget found${NC}" >&2
         echo -e "${YELLOW}💡 Install curl or wget and try again${NC}" >&2
         exit 1
     fi
-    chmod +x "$AMP_SCRIPT"
-    chmod +x "$AMP_HOME/amp-workspace.sh"
-    echo "✅ Downloaded scripts"
+
+    chmod +x "$AMP_SCRIPT" "$AMP_HOME/amp-workspace.sh"
+    echo "✅ Downloaded latest scripts"
 fi
 
 # Add to shell RC files

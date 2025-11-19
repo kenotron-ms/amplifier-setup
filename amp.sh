@@ -299,6 +299,72 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
 # ============================================================================
 
 amp() {
+    # Handle subcommands
+    case "${1:-}" in
+        workspace)
+            shift
+            # Source workspace functions
+            local workspace_script="$(dirname "${BASH_SOURCE[0]}")/amp-workspace.sh"
+            if [[ -f "$workspace_script" ]]; then
+                # shellcheck disable=SC1090
+                source "$workspace_script"
+                amp_workspace "$@"
+            else
+                echo "❌ Error: amp-workspace.sh not found"
+                return 1
+            fi
+            return
+            ;;
+        update)
+            # Force update of amplifier main repo
+            echo "🔄 Forcing amplifier update..."
+            rm -f "$AMP_LAST_CHECK"  # Force update check
+
+            if [[ ! -d "$AMP_AMPLIFIER_DIR" ]]; then
+                echo "❌ Error: Amplifier not installed yet"
+                echo "💡 Run 'amp' first to bootstrap"
+                return 1
+            fi
+
+            cd "$AMP_AMPLIFIER_DIR" || return 1
+
+            echo "📥 Fetching latest changes..."
+            if ! git fetch origin main; then
+                echo "❌ Error: Failed to fetch updates"
+                return 1
+            fi
+
+            local local_sha
+            local remote_sha
+            local_sha=$(git rev-parse HEAD)
+            remote_sha=$(git rev-parse origin/main)
+
+            if [[ "$local_sha" == "$remote_sha" ]]; then
+                echo "✅ Already up to date"
+                return 0
+            fi
+
+            echo "📥 Pulling changes..."
+            if ! git pull origin main; then
+                echo "❌ Error: Failed to pull updates"
+                echo "💡 Try: cd $AMP_AMPLIFIER_DIR && git status"
+                return 1
+            fi
+
+            echo "🔧 Reinstalling dependencies..."
+            if ! make install; then
+                echo "❌ Error: Installation failed"
+                return 1
+            fi
+
+            echo ""
+            echo "✅ Amplifier updated successfully"
+            echo "   From: ${local_sha:0:7}"
+            echo "   To:   ${remote_sha:0:7}"
+            return 0
+            ;;
+    esac
+
     # Check if bootstrap is needed
     if [[ ! -f "$AMP_READY_FLAG" ]]; then
         _amp_bootstrap

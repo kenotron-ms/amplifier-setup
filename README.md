@@ -54,11 +54,13 @@ curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/insta
 ```
 
 This will:
-1. Download `amp.sh` to `~/.amp/`
+1. Download latest `amp.sh` and `amp-workspace.sh` to `~/.amp/`
 2. Add it to your `~/.bashrc` and `~/.zshrc`
 3. Make it available immediately in your current shell
 
 **That's it!** After installation completes, just type `amp` to get started.
+
+**Note**: This installer is idempotent - run it anytime to get the latest version of amp scripts.
 
 ### Manual Install
 
@@ -111,6 +113,16 @@ amp workspace info
 # Remove a workspace worktree
 amp workspace remove
 amp workspace remove /path/to/project
+```
+
+### Update amp Scripts
+
+```bash
+# Update amp.sh and amp-workspace.sh to latest version
+curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash
+
+# Force update amplifier repository (pulls from origin/main)
+amp update
 ```
 
 ### First Run
