@@ -2,6 +2,33 @@
 
 **A transparent wrapper for Claude Code that automatically manages the [Amplifier](https://github.com/microsoft/amplifier) development environment.**
 
+## Quick Start
+
+### Installation
+
+**Copy and paste this into your terminal:**
+
+```bash
+gh repo view kenotron-ms/amplifier-setup --raw install.sh | bash
+```
+
+Or using curl:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
+```
+
+### Usage
+
+```bash
+cd ~/your-project
+amp
+```
+
+**That's it!** Use `amp` exactly like you would use `claude`.
+
+---
+
 ## What is `amp`?
 
 `amp` is a command that you use **exactly like `claude`**, but with all the amplifier complexity handled automatically behind the scenes.
@@ -28,7 +55,9 @@ This creates friction, especially for non-technical users.
 
 **You just type `amp` instead of `claude` - that's it.**
 
-## Installation
+---
+
+## Detailed Installation
 
 ### Prerequisites
 
@@ -39,7 +68,7 @@ Before installing `amp`, ensure you have:
 - **uv** - [Installation](https://docs.astral.sh/uv/getting-started/installation/)
 - **claude** - [Installation](https://docs.anthropic.com/en/docs/claude-code/install)
 
-### Quick Install
+### Installation Options
 
 **Copy and paste this into your terminal:**
 
