@@ -225,12 +225,41 @@ _amp_bootstrap() {
     # Check prerequisites
     _amp_check_prereqs || return 1
 
-    # Clone repository if it doesn't exist
+    # Clone repository if it doesn't exist, otherwise update it
     if [[ ! -d "$AMP_AMPLIFIER_DIR" ]]; then
         _amp_clone || return 1
     else
-        echo "📦 Amplifier already exists at $AMP_AMPLIFIER_DIR"
-        _amp_log "Using existing amplifier installation"
+        echo "📦 Amplifier already exists, updating to latest..."
+        _amp_log "Updating existing amplifier installation"
+
+        cd "$AMP_AMPLIFIER_DIR" || {
+            _amp_error "Failed to change to amplifier directory" \
+                "Check directory exists: $AMP_AMPLIFIER_DIR"
+            return 1
+        }
+
+        echo "📥 Fetching latest changes..."
+        if ! git fetch origin main; then
+            echo "⚠️  Warning: Failed to fetch updates, using existing version"
+            _amp_log "Warning: Failed to fetch during bootstrap"
+        else
+            local local_sha
+            local remote_sha
+            local_sha=$(git rev-parse HEAD)
+            remote_sha=$(git rev-parse origin/main)
+
+            if [[ "$local_sha" != "$remote_sha" ]]; then
+                echo "📥 Pulling latest changes..."
+                if ! git pull origin main; then
+                    echo "⚠️  Warning: Failed to pull updates, using existing version"
+                    _amp_log "Warning: Failed to pull during bootstrap"
+                else
+                    echo "✅ Updated to latest"
+                fi
+            else
+                echo "✅ Already up to date"
+            fi
+        fi
     fi
 
     # Install dependencies
