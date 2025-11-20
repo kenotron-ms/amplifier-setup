@@ -343,10 +343,17 @@ Please read @$workspace_dir/CLAUDE.md for project-specific guidance.
 
 Whenever we execute any tools, we should assume $workspace_dir is the root directory."
 
-    _amp_log "Launching claude from $workspace_dir using worktree $worktree_path"
+    _amp_log "Launching claude from worktree $worktree_path with project dir $workspace_dir"
 
-    # Execute claude with workspace context as first message, then pass through all user arguments
-    claude "$workspace_message" "$@"
+    # Change to worktree directory and launch claude with project directory added
+    cd "$worktree_path" || {
+        _amp_error "Failed to change to worktree directory" \
+            "Check worktree exists: $worktree_path"
+        return 1
+    }
+
+    # Execute claude with workspace context and add project directory
+    claude "$workspace_message" --add-dir "$workspace_dir" "$@"
 }
 
 # ============================================================================
