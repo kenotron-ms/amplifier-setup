@@ -280,11 +280,15 @@ _amp_execute() {
     # Check for updates (once per day)
     _amp_update
 
-    # Source workspace functions
-    local workspace_script="$(dirname "${BASH_SOURCE[0]}")/amp-workspace.sh"
+    # Source workspace functions (should be in same directory as amp.sh)
+    local workspace_script="$AMP_HOME/amp-workspace.sh"
     if [[ -f "$workspace_script" ]]; then
         # shellcheck disable=SC1090
         source "$workspace_script"
+    else
+        _amp_error "Workspace script not found: $workspace_script" \
+            "Reinstall amp: curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash"
+        return 1
     fi
 
     # Get or create workspace worktree for current directory

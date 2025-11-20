@@ -42,12 +42,25 @@ _amp_get_or_create_worktree() {
         return 1
     }
 
-    if ! git worktree add "$worktree_path" main 2>&1 | grep -v "^$" >&2; then
-        echo "❌ Error: Failed to create worktree" >&2
-        return 1
+    # Create a unique branch for this worktree (based on workspace name)
+    local branch_name="workspace/$workspace_name"
+
+    # Check if branch already exists (from previous worktree)
+    if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+        # Branch exists, use it without creating new one
+        if ! git worktree add "$worktree_path" "$branch_name" 2>&1 | grep -v "^$" >&2; then
+            echo "❌ Error: Failed to create worktree" >&2
+            return 1
+        fi
+    else
+        # Branch doesn't exist, create new one from main
+        if ! git worktree add -b "$branch_name" "$worktree_path" main 2>&1 | grep -v "^$" >&2; then
+            echo "❌ Error: Failed to create worktree" >&2
+            return 1
+        fi
     fi
 
-    echo "✅ Worktree created" >&2
+    echo "✅ Worktree created on branch: $branch_name" >&2
 
     # Set up virtual environment for this worktree
     echo "🔧 Setting up virtual environment..." >&2
@@ -112,8 +125,22 @@ _amp_remove_worktree() {
 
     echo "🗑️  Removing workspace worktree: $workspace_name"
 
+    # Get the branch name before removing
+    local branch_name
+    if [[ -d "$worktree_path" ]]; then
+        branch_name=$(cd "$worktree_path" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    fi
+
     if git worktree remove "$worktree_path" --force; then
-        echo "✅ Workspace removed: $workspace_path"
+        echo "✅ Worktree removed: $workspace_path"
+
+        # Also delete the branch if it was a workspace branch
+        if [[ -n "$branch_name" ]] && [[ "$branch_name" == workspace/* ]]; then
+            echo "🗑️  Removing branch: $branch_name"
+            if git branch -D "$branch_name" 2>/dev/null; then
+                echo "✅ Branch removed"
+            fi
+        fi
     else
         echo "❌ Failed to remove worktree"
         echo "   You may need to remove manually: rm -rf $worktree_path"
