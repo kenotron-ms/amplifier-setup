@@ -16,8 +16,11 @@ _amp_workspace_name() {
 
 # Get or create worktree for current workspace
 _amp_get_or_create_worktree() {
-    local workspace_path
-    workspace_path="$(pwd)"
+    # Save original directory to restore on any exit
+    local original_dir
+    original_dir="$(pwd)"
+
+    local workspace_path="$original_dir"
 
     # Don't create workspace for amplifier directories themselves
     if [[ "$workspace_path" == "$AMP_HOME"* ]] || [[ "$workspace_path" == "$AMP_AMPLIFIER_DIR"* ]]; then
@@ -45,47 +48,41 @@ _amp_get_or_create_worktree() {
     # Ensure workspace directory exists
     mkdir -p "$AMP_HOME/w"
 
-    # Create git worktree from main amplifier repo
-    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
-        echo "❌ Error: Main amplifier repo not found at $AMP_AMPLIFIER_DIR" >&2
+    # Create git worktree from main amplifier repo (in subshell to restore dir)
+    (
+        cd "$AMP_AMPLIFIER_DIR" || exit 1
+
+        # Create a unique branch for this worktree (based on workspace name)
+        local branch_name="workspace/$workspace_name"
+
+        # Check if branch already exists (from previous worktree)
+        if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+            # Branch exists, use it without creating new one
+            git worktree add "$worktree_path" "$branch_name" 2>&1 | grep -v "^$" >&2
+        else
+            # Branch doesn't exist, create new one from main
+            git worktree add -b "$branch_name" "$worktree_path" main 2>&1 | grep -v "^$" >&2
+        fi
+    ) || {
+        echo "❌ Error: Failed to create worktree" >&2
+        cd "$original_dir" 2>/dev/null || true
         return 1
     }
 
-    # Create a unique branch for this worktree (based on workspace name)
-    local branch_name="workspace/$workspace_name"
+    echo "✅ Worktree created on branch: workspace/$workspace_name" >&2
 
-    # Check if branch already exists (from previous worktree)
-    if git show-ref --verify --quiet "refs/heads/$branch_name"; then
-        # Branch exists, use it without creating new one
-        if ! git worktree add "$worktree_path" "$branch_name" 2>&1 | grep -v "^$" >&2; then
-            echo "❌ Error: Failed to create worktree" >&2
-            popd > /dev/null
-            return 1
-        fi
-    else
-        # Branch doesn't exist, create new one from main
-        if ! git worktree add -b "$branch_name" "$worktree_path" main 2>&1 | grep -v "^$" >&2; then
-            echo "❌ Error: Failed to create worktree" >&2
-            popd > /dev/null
-            return 1
-        fi
-    fi
-
-    popd > /dev/null
-    echo "✅ Worktree created on branch: $branch_name" >&2
-
-    # Set up virtual environment for this worktree
+    # Set up virtual environment for this worktree (in subshell)
     echo "🔧 Setting up virtual environment..." >&2
-    pushd "$worktree_path" > /dev/null || return 1
-
-    if ! make install >> "$AMP_LOG" 2>&1; then
+    (
+        cd "$worktree_path" || exit 1
+        make install >> "$AMP_LOG" 2>&1
+    ) || {
         echo "⚠️  Warning: make install failed (check log: $AMP_LOG)" >&2
         echo "   You may need to run 'make install' manually in the worktree" >&2
-    else
-        echo "✅ Dependencies installed" >&2
-    fi
+    }
 
-    popd > /dev/null
+    # Explicitly return to original directory
+    cd "$original_dir" 2>/dev/null || true
 
     echo "" >&2
     echo "✅ Workspace ready: $workspace_name" >&2
@@ -97,6 +94,9 @@ _amp_get_or_create_worktree() {
 
 # List all workspace worktrees
 _amp_list_workspaces() {
+    local original_dir
+    original_dir="$(pwd)"
+
     local workspace_base="$AMP_HOME/w"
 
     if [[ ! -d "$workspace_base" ]] || [[  -z "$(ls -A "$workspace_base" 2>/dev/null)" ]]; then
@@ -109,24 +109,29 @@ _amp_list_workspaces() {
     echo "Workspace Worktrees:"
     echo ""
 
-    # List all worktrees using git
-    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || return 1
-    git worktree list | grep "$workspace_base" | while read -r path branch rest; do
-        local workspace_name
-        workspace_name="$(basename "$path")"
-        local branch_name
-        branch_name=$(echo "$branch" | sed 's/[\[\]]//g')
+    # List all worktrees using git (in subshell to auto-restore)
+    (
+        cd "$AMP_AMPLIFIER_DIR" || exit 1
+        git worktree list | grep "$workspace_base" | while read -r path branch rest; do
+            local workspace_name
+            workspace_name="$(basename "$path")"
+            local branch_name
+            branch_name=$(echo "$branch" | /usr/bin/sed 's/[\[\]]//g')
 
-        printf "%-30s %s\n" "$workspace_name" "$path"
-        printf "  Branch: %s\n\n" "$branch_name"
-    done
+            printf "%-30s %s\n" "$workspace_name" "$path"
+            printf "  Branch: %s\n\n" "$branch_name"
+        done
+    )
 
-    popd > /dev/null
+    cd "$original_dir" 2>/dev/null || true
 }
 
 # Remove a workspace worktree
 _amp_remove_worktree() {
-    local workspace_path="${1:-$(pwd)}"
+    local original_dir
+    original_dir="$(pwd)"
+
+    local workspace_path="${1:-$original_dir}"
     local workspace_name
     workspace_name="$(_amp_workspace_name "$workspace_path")"
     local worktree_path="$AMP_HOME/w/$workspace_name"
@@ -136,9 +141,6 @@ _amp_remove_worktree() {
         return 1
     fi
 
-    # Remove git worktree
-    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || return 1
-
     echo "🗑️  Removing workspace worktree: $workspace_name"
 
     # Get the branch name before removing
@@ -147,7 +149,16 @@ _amp_remove_worktree() {
         branch_name=$(cd "$worktree_path" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
     fi
 
-    if git worktree remove "$worktree_path" --force; then
+    # Remove worktree and branch (in subshell)
+    (
+        cd "$AMP_AMPLIFIER_DIR" || exit 1
+
+        if ! git worktree remove "$worktree_path" --force; then
+            echo "❌ Failed to remove worktree" >&2
+            echo "   You may need to remove manually: rm -rf $worktree_path" >&2
+            exit 1
+        fi
+
         echo "✅ Worktree removed: $workspace_path"
 
         # Also delete the branch if it was a workspace branch
@@ -157,14 +168,12 @@ _amp_remove_worktree() {
                 echo "✅ Branch removed"
             fi
         fi
-
-        popd > /dev/null
-    else
-        echo "❌ Failed to remove worktree"
-        echo "   You may need to remove manually: rm -rf $worktree_path"
-        popd > /dev/null
+    ) || {
+        cd "$original_dir" 2>/dev/null || true
         return 1
-    fi
+    }
+
+    cd "$original_dir" 2>/dev/null || true
 }
 
 # Show info for current workspace worktree

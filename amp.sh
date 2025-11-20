@@ -142,54 +142,54 @@ _amp_update() {
 
     echo "🔄 Checking for updates..."
 
-    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
-        _amp_error "Failed to change to amplifier directory" \
-            "Check directory exists: $AMP_AMPLIFIER_DIR"
-        return 1
-    }
+    # Use subshell to auto-restore directory
+    (
+        cd "$AMP_AMPLIFIER_DIR" || {
+            _amp_error "Failed to change to amplifier directory" \
+                "Check directory exists: $AMP_AMPLIFIER_DIR"
+            exit 1
+        }
 
-    # Fetch latest changes
-    if ! git fetch origin main --quiet 2>&1; then
-        _amp_log "Warning: Failed to fetch updates"
+        # Fetch latest changes
+        if ! git fetch origin main --quiet 2>&1; then
+            _amp_log "Warning: Failed to fetch updates"
+            echo "$current_time" > "$AMP_LAST_CHECK"
+            exit 0
+        fi
+
+        # Check if update is available
+        local local_sha
+        local remote_sha
+        local_sha=$(git rev-parse HEAD)
+        remote_sha=$(git rev-parse origin/main)
+
+        if [[ "$local_sha" != "$remote_sha" ]]; then
+            echo "📥 Updates available, pulling changes..."
+
+            if ! git pull origin main --quiet; then
+                _amp_error "Failed to pull updates" \
+                    "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
+                exit 1
+            fi
+
+            _amp_log "Updated from $local_sha to $remote_sha"
+
+            # Re-install after update
+            echo "🔧 Reinstalling dependencies..."
+            if ! make install >> "$AMP_LOG" 2>&1; then
+                _amp_error "Failed to reinstall after update" \
+                    "Check log: $AMP_LOG"
+                exit 1
+            fi
+
+            echo "✅ Updated and reinstalled"
+        fi
+
+        # Update last check timestamp
         echo "$current_time" > "$AMP_LAST_CHECK"
-        popd > /dev/null
-        return 0
-    fi
-
-    # Check if update is available
-    local local_sha
-    local remote_sha
-    local_sha=$(git rev-parse HEAD)
-    remote_sha=$(git rev-parse origin/main)
-
-    if [[ "$local_sha" != "$remote_sha" ]]; then
-        echo "📥 Updates available, pulling changes..."
-
-        if ! git pull origin main --quiet; then
-            _amp_error "Failed to pull updates" \
-                "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
-            popd > /dev/null
-            return 1
-        fi
-
-        _amp_log "Updated from $local_sha to $remote_sha"
-
-        # Re-install after update
-        echo "🔧 Reinstalling dependencies..."
-        if ! make install >> "$AMP_LOG" 2>&1; then
-            _amp_error "Failed to reinstall after update" \
-                "Check log: $AMP_LOG"
-            popd > /dev/null
-            return 1
-        fi
-
-        echo "✅ Updated and reinstalled"
-    fi
-
-    # Update last check timestamp
-    echo "$current_time" > "$AMP_LAST_CHECK"
-
-    popd > /dev/null
+        exit 0
+    )
+    return $?
 }
 
 # ============================================================================
@@ -337,7 +337,7 @@ _amp_execute() {
     local project_name
     project_name="$(basename "$workspace_dir")"
 
-    local workspace_message="I'm working on the $project_name project. The project is located at $workspace_dir. The ~/amplifier directory is just the dev environment.
+    local workspace_message="I'm working on the $project_name project. The project is located at $workspace_dir. The $worktree_path directory is the amplifier dev environment for this workspace.
 
 Please read @$workspace_dir/CLAUDE.md for project-specific guidance.
 
