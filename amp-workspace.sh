@@ -10,13 +10,21 @@
 _amp_workspace_name() {
     local path="$1"
     # Remove leading slash, replace / with -, keep only alphanumeric and dash/underscore
-    echo "$path" | sed 's:^/::' | tr '/' '-' | tr -cd '[:alnum:]-_'
+    # Use full paths to avoid PATH issues
+    echo "$path" | /usr/bin/sed 's:^/::' | /usr/bin/tr '/' '-' | /usr/bin/tr -cd '[:alnum:]-_'
 }
 
 # Get or create worktree for current workspace
 _amp_get_or_create_worktree() {
     local workspace_path
     workspace_path="$(pwd)"
+
+    # Don't create workspace for amplifier directories themselves
+    if [[ "$workspace_path" == "$AMP_HOME"* ]] || [[ "$workspace_path" == "$AMP_AMPLIFIER_DIR"* ]]; then
+        echo "❌ Error: Cannot create workspace for amplifier directory" >&2
+        echo "💡 Run amp from your project directory, not from $AMP_HOME or $AMP_AMPLIFIER_DIR" >&2
+        return 1
+    fi
 
     local workspace_name
     workspace_name="$(_amp_workspace_name "$workspace_path")"
