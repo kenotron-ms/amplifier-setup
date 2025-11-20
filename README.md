@@ -62,6 +62,11 @@ This will:
 
 **Note**: This installer is idempotent - run it anytime to get the latest version of amp scripts.
 
+**Important**: After updating, reload your shell or run:
+```bash
+source ~/.bashrc  # or source ~/.zshrc
+```
+
 ### Manual Install
 
 1. Download `amp.sh`:
