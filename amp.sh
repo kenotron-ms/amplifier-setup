@@ -346,7 +346,7 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
     _amp_log "Launching claude from worktree $worktree_path with project dir $workspace_dir"
 
     # Change to worktree directory and launch claude with project directory added
-    cd "$worktree_path" || {
+    pushd "$worktree_path" > /dev/null || {
         _amp_error "Failed to change to worktree directory" \
             "Check worktree exists: $worktree_path"
         return 1
@@ -354,6 +354,9 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
 
     # Execute claude with workspace context and add project directory
     claude "$workspace_message" --add-dir "$workspace_dir" "$@"
+
+    # Return to original directory after claude exits
+    popd > /dev/null
 }
 
 # ============================================================================
