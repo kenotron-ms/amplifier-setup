@@ -20,10 +20,18 @@ _amp_get_or_create_worktree() {
     local original_dir
     original_dir="$(pwd)"
 
-    local workspace_path="$original_dir"
+    # Get absolute path to handle relative directories properly
+    local workspace_path
+    workspace_path="$(cd "$original_dir" && pwd)"
+
+    # Normalize AMP_HOME and AMP_AMPLIFIER_DIR to absolute paths for comparison
+    local amp_home_abs
+    local amp_amplifier_abs
+    amp_home_abs="$(cd "$AMP_HOME" 2>/dev/null && pwd || echo "$AMP_HOME")"
+    amp_amplifier_abs="$(cd "$AMP_AMPLIFIER_DIR" 2>/dev/null && pwd || echo "$AMP_AMPLIFIER_DIR")"
 
     # Don't create workspace for amplifier directories themselves
-    if [[ "$workspace_path" == "$AMP_HOME"* ]] || [[ "$workspace_path" == "$AMP_AMPLIFIER_DIR"* ]]; then
+    if [[ "$workspace_path" == "$amp_home_abs"* ]] || [[ "$workspace_path" == "$amp_amplifier_abs"* ]]; then
         echo "❌ Error: Cannot create workspace for amplifier directory" >&2
         echo "💡 Run amp from your project directory, not from $AMP_HOME or $AMP_AMPLIFIER_DIR" >&2
         return 1
