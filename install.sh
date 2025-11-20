@@ -151,12 +151,26 @@ for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
     fi
 done
 
-# Source for current session
+# Reload shell config to load amp command
 echo ""
-echo "🔄 Loading amp command for current session..."
-# shellcheck disable=SC1090
-source "$AMP_SCRIPT"
-echo "✅ amp command loaded"
+echo "🔄 Reloading shell configuration..."
+
+# Determine which RC file to reload based on current shell
+if [[ "$SHELL" == */zsh ]]; then
+    RELOAD_CMD="source ~/.zshrc"
+    # shellcheck disable=SC1090
+    source ~/.zshrc 2>/dev/null || source "$AMP_SCRIPT"
+elif [[ "$SHELL" == */bash ]]; then
+    RELOAD_CMD="source ~/.bashrc"
+    # shellcheck disable=SC1090
+    source ~/.bashrc 2>/dev/null || source "$AMP_SCRIPT"
+else
+    RELOAD_CMD="source $AMP_SCRIPT"
+    # shellcheck disable=SC1090
+    source "$AMP_SCRIPT"
+fi
+
+echo "✅ Shell configuration reloaded"
 
 # Show success message
 echo ""
