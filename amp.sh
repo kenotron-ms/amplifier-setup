@@ -298,7 +298,7 @@ _amp_execute() {
         source "$workspace_script"
     else
         _amp_error "Workspace script not found: $workspace_script" \
-            "Reinstall amp: curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash"
+            "Reinstall amp: curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash"
         return 1
     fi
 

@@ -2,7 +2,7 @@
 # install.sh - Install/Update the amp command
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
 #
 # This script is idempotent - safe to run multiple times to get latest version.
 #
@@ -27,7 +27,7 @@ echo ""
 # Configuration
 AMP_HOME="${AMP_HOME:-$HOME/.amp}"
 AMP_SCRIPT="$AMP_HOME/amp.sh"
-DOWNLOAD_URL="https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp.sh"
+DOWNLOAD_URL="https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp.sh"
 
 # Clean up old script versions if they exist
 if [[ -f "$AMP_SCRIPT" ]]; then
@@ -71,7 +71,7 @@ else
         mv -f "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
 
         # Download amp-workspace.sh
-        if curl -fsSL "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -o "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
+        if curl -fsSL "https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp-workspace.sh" -o "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
             mv -f "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
         fi
 
@@ -85,7 +85,7 @@ else
         mv -f "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
 
         # Download amp-workspace.sh
-        if wget -q "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -O "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
+        if wget -q "https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp-workspace.sh" -O "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
             mv -f "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
         fi
 

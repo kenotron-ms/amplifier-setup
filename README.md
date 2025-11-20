@@ -44,13 +44,13 @@ Before installing `amp`, ensure you have:
 **Copy and paste this into your terminal:**
 
 ```bash
-gh repo view kenotron/amplifier-setup --raw install.sh | bash
+gh repo view kenotron-ms/amplifier-setup --raw install.sh | bash
 ```
 
 Or using curl:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
 ```
 
 This will:
@@ -72,8 +72,8 @@ source ~/.bashrc  # or source ~/.zshrc
 1. Download `amp.sh`:
 ```bash
 mkdir -p ~/.amp
-curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp.sh -o ~/.amp/amp.sh
-curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh -o ~/.amp/amp-workspace.sh
+curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp.sh -o ~/.amp/amp.sh
+curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp-workspace.sh -o ~/.amp/amp-workspace.sh
 chmod +x ~/.amp/amp.sh ~/.amp/amp-workspace.sh
 ```
 
@@ -124,7 +124,7 @@ amp workspace remove /path/to/project
 
 ```bash
 # Update amp.sh and amp-workspace.sh to latest version
-curl -fsSL https://raw.githubusercontent.com/kenotron/amplifier-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
 
 # Force update amplifier repository (pulls from origin/main)
 amp update
@@ -308,7 +308,7 @@ rm -rf ~/.amp
 
 ## Contributing
 
-See the [amplifier-setup repository](https://github.com/kenotron/amplifier-setup) for contribution guidelines.
+See the [amplifier-setup repository](https://github.com/kenotron-ms/amplifier-setup) for contribution guidelines.
 
 ## License
 
