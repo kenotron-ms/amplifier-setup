@@ -142,7 +142,7 @@ _amp_update() {
 
     echo "🔄 Checking for updates..."
 
-    cd "$AMP_AMPLIFIER_DIR" || {
+    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
         _amp_error "Failed to change to amplifier directory" \
             "Check directory exists: $AMP_AMPLIFIER_DIR"
         return 1
@@ -152,6 +152,7 @@ _amp_update() {
     if ! git fetch origin main --quiet 2>&1; then
         _amp_log "Warning: Failed to fetch updates"
         echo "$current_time" > "$AMP_LAST_CHECK"
+        popd > /dev/null
         return 0
     fi
 
@@ -167,6 +168,7 @@ _amp_update() {
         if ! git pull origin main --quiet; then
             _amp_error "Failed to pull updates" \
                 "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
+            popd > /dev/null
             return 1
         fi
 
@@ -177,6 +179,7 @@ _amp_update() {
         if ! make install >> "$AMP_LOG" 2>&1; then
             _amp_error "Failed to reinstall after update" \
                 "Check log: $AMP_LOG"
+            popd > /dev/null
             return 1
         fi
 
@@ -185,6 +188,8 @@ _amp_update() {
 
     # Update last check timestamp
     echo "$current_time" > "$AMP_LAST_CHECK"
+
+    popd > /dev/null
 }
 
 # ============================================================================
@@ -194,7 +199,7 @@ _amp_update() {
 _amp_install() {
     echo "🔧 Installing dependencies..."
 
-    cd "$AMP_AMPLIFIER_DIR" || {
+    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
         _amp_error "Failed to change to amplifier directory" \
             "Check directory exists: $AMP_AMPLIFIER_DIR"
         return 1
@@ -203,11 +208,14 @@ _amp_install() {
     if ! make install >> "$AMP_LOG" 2>&1; then
         _amp_error "Installation failed" \
             "Check log for details: $AMP_LOG"
+        popd > /dev/null
         return 1
     fi
 
     _amp_log "Installation completed"
     echo "✅ Dependencies installed"
+
+    popd > /dev/null
 }
 
 # ============================================================================
@@ -232,7 +240,7 @@ _amp_bootstrap() {
         echo "📦 Amplifier already exists, updating to latest..."
         _amp_log "Updating existing amplifier installation"
 
-        cd "$AMP_AMPLIFIER_DIR" || {
+        pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
             _amp_error "Failed to change to amplifier directory" \
                 "Check directory exists: $AMP_AMPLIFIER_DIR"
             return 1
@@ -242,6 +250,7 @@ _amp_bootstrap() {
         if ! git fetch origin main; then
             echo "⚠️  Warning: Failed to fetch updates, using existing version"
             _amp_log "Warning: Failed to fetch during bootstrap"
+            popd > /dev/null
         else
             local local_sha
             local remote_sha
@@ -259,6 +268,8 @@ _amp_bootstrap() {
             else
                 echo "✅ Already up to date"
             fi
+
+            popd > /dev/null
         fi
     fi
 

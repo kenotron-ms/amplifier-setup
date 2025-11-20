@@ -38,7 +38,7 @@ _amp_get_or_create_worktree() {
     mkdir -p "$AMP_HOME/w"
 
     # Create git worktree from main amplifier repo
-    cd "$AMP_AMPLIFIER_DIR" || {
+    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
         echo "❌ Error: Main amplifier repo not found at $AMP_AMPLIFIER_DIR" >&2
         return 1
     }
@@ -51,21 +51,24 @@ _amp_get_or_create_worktree() {
         # Branch exists, use it without creating new one
         if ! git worktree add "$worktree_path" "$branch_name" 2>&1 | grep -v "^$" >&2; then
             echo "❌ Error: Failed to create worktree" >&2
+            popd > /dev/null
             return 1
         fi
     else
         # Branch doesn't exist, create new one from main
         if ! git worktree add -b "$branch_name" "$worktree_path" main 2>&1 | grep -v "^$" >&2; then
             echo "❌ Error: Failed to create worktree" >&2
+            popd > /dev/null
             return 1
         fi
     fi
 
+    popd > /dev/null
     echo "✅ Worktree created on branch: $branch_name" >&2
 
     # Set up virtual environment for this worktree
     echo "🔧 Setting up virtual environment..." >&2
-    cd "$worktree_path" || return 1
+    pushd "$worktree_path" > /dev/null || return 1
 
     if ! make install >> "$AMP_LOG" 2>&1; then
         echo "⚠️  Warning: make install failed (check log: $AMP_LOG)" >&2
@@ -73,6 +76,8 @@ _amp_get_or_create_worktree() {
     else
         echo "✅ Dependencies installed" >&2
     fi
+
+    popd > /dev/null
 
     echo "" >&2
     echo "✅ Workspace ready: $workspace_name" >&2
@@ -97,7 +102,7 @@ _amp_list_workspaces() {
     echo ""
 
     # List all worktrees using git
-    cd "$AMP_AMPLIFIER_DIR" || return 1
+    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || return 1
     git worktree list | grep "$workspace_base" | while read -r path branch rest; do
         local workspace_name
         workspace_name="$(basename "$path")"
@@ -107,6 +112,8 @@ _amp_list_workspaces() {
         printf "%-30s %s\n" "$workspace_name" "$path"
         printf "  Branch: %s\n\n" "$branch_name"
     done
+
+    popd > /dev/null
 }
 
 # Remove a workspace worktree
@@ -122,7 +129,7 @@ _amp_remove_worktree() {
     fi
 
     # Remove git worktree
-    cd "$AMP_AMPLIFIER_DIR" || return 1
+    pushd "$AMP_AMPLIFIER_DIR" > /dev/null || return 1
 
     echo "🗑️  Removing workspace worktree: $workspace_name"
 
@@ -142,9 +149,12 @@ _amp_remove_worktree() {
                 echo "✅ Branch removed"
             fi
         fi
+
+        popd > /dev/null
     else
         echo "❌ Failed to remove worktree"
         echo "   You may need to remove manually: rm -rf $worktree_path"
+        popd > /dev/null
         return 1
     fi
 }
