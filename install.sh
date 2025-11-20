@@ -66,11 +66,11 @@ else
             echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
             exit 1
         fi
-        mv "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
+        mv -f "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
 
         # Download amp-workspace.sh
         if curl -fsSL "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -o "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
-            mv "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
+            mv -f "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
         fi
 
     elif command -v wget &> /dev/null; then
@@ -80,11 +80,11 @@ else
             echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
             exit 1
         fi
-        mv "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
+        mv -f "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
 
         # Download amp-workspace.sh
         if wget -q "https://raw.githubusercontent.com/kenotron/amplifier-setup/main/amp-workspace.sh" -O "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
-            mv "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
+            mv -f "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
         fi
 
     else
