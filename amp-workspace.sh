@@ -6,10 +6,11 @@
 
 # Convert path to safe directory name
 # /home/user/projects/foo -> home-user-projects-foo
+# /Users/ken/workspace/foo -> Users-ken-workspace-foo
 _amp_workspace_name() {
     local path="$1"
-    # Remove leading slash/drive, replace / with -, keep only alphanumeric and dash
-    echo "$path" | sed 's:^[A-Za-z]:::' | sed 's:^/::' | tr '/' '-' | tr -cd '[:alnum:]-_'
+    # Remove leading slash, replace / with -, keep only alphanumeric and dash/underscore
+    echo "$path" | sed 's:^/::' | tr '/' '-' | tr -cd '[:alnum:]-_'
 }
 
 # Get or create worktree for current workspace
