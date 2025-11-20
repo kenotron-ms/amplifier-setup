@@ -9,12 +9,6 @@
 **Copy and paste this into your terminal:**
 
 ```bash
-gh repo view kenotron-ms/amplifier-setup --raw install.sh | bash
-```
-
-Or using curl:
-
-```bash
 curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
 ```
 
@@ -73,12 +67,6 @@ Before installing `amp`, ensure you have:
 **Copy and paste this into your terminal:**
 
 ```bash
-gh repo view kenotron-ms/amplifier-setup --raw install.sh | bash
-```
-
-Or using curl:
-
-```bash
 curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
 ```
 
@@ -91,9 +79,17 @@ This will:
 
 **Note**: This installer is idempotent - run it anytime to get the latest version of amp scripts.
 
-**Important**: After updating, reload your shell or run:
+**Important**: After updating, reload your shell configuration:
+
 ```bash
-source ~/.bashrc  # or source ~/.zshrc
+# Reload your shell (automatically detects bash or zsh)
+source ~/.${SHELL##*/}rc 2>/dev/null || exec $SHELL
+```
+
+Or manually reload based on your shell:
+```bash
+source ~/.bashrc  # If using bash
+source ~/.zshrc   # If using zsh (macOS default since Catalina)
 ```
 
 ### Manual Install
@@ -106,14 +102,28 @@ curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/am
 chmod +x ~/.amp/amp.sh ~/.amp/amp-workspace.sh
 ```
 
-2. Add to your shell RC file (`~/.bashrc` or `~/.zshrc`):
+2. Add to your shell RC file:
 ```bash
-echo 'source ~/.amp/amp.sh' >> ~/.bashrc  # or ~/.zshrc
+# Automatically add to the correct shell RC file
+echo 'source ~/.amp/amp.sh' >> ~/.${SHELL##*/}rc
 ```
 
-3. Reload your shell:
+Or manually add based on your shell:
 ```bash
-source ~/.bashrc  # or source ~/.zshrc
+echo 'source ~/.amp/amp.sh' >> ~/.bashrc  # If using bash
+echo 'source ~/.amp/amp.sh' >> ~/.zshrc   # If using zsh (macOS default)
+```
+
+3. Reload your shell configuration:
+```bash
+# Automatically reload the correct shell
+source ~/.${SHELL##*/}rc 2>/dev/null || exec $SHELL
+```
+
+Or manually reload based on your shell:
+```bash
+source ~/.bashrc  # If using bash
+source ~/.zshrc   # If using zsh (macOS default since Catalina)
 ```
 
 ## Usage
@@ -159,6 +169,19 @@ curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/in
 amp update
 ```
 
+### Uninstall
+
+```bash
+# Remove amp (keeps workspace data)
+amp uninstall
+
+# Remove amp and all workspace data
+amp uninstall --data
+
+# View uninstall options
+amp uninstall --help
+```
+
 ### First Run
 
 On your first `amp` command, it will automatically:
@@ -181,12 +204,12 @@ After the first run, `amp` is fast:
 
 ### Workspace Pattern
 
-When you run `amp` from any directory, it automatically provides Claude Code with workspace context:
+When you run `amp` from any directory, it automatically provides Claude Code with workspace context via `--append-system-prompt`:
 
 ```
 I'm working on the {project-name} project.
 The project is located at {current-directory}.
-The ~/amplifier directory is just the dev environment.
+The {worktree-path} directory is the amplifier dev environment for this workspace.
 
 Please read @{current-directory}/CLAUDE.md for project-specific guidance.
 
@@ -196,6 +219,7 @@ Whenever we execute any tools, we should assume {current-directory} is the root 
 This tells Claude Code:
 - What project you're working on
 - Where the project is located
+- Where the amplifier dev environment is (separate from your project)
 - To look for `CLAUDE.md` for project-specific instructions
 - To use your current directory as the working directory
 
@@ -316,18 +340,44 @@ git reset --hard origin/main  # Reset to clean state
 
 ## Uninstall
 
-To remove `amp`:
+### Using the amp command (recommended)
 
 ```bash
-# Remove the amp function from shell RC files
-sed -i.bak '/# Amplifier (amp command)/d' ~/.bashrc
-sed -i.bak '/source.*amp.sh/d' ~/.bashrc
-sed -i.bak '/# Amplifier (amp command)/d' ~/.zshrc
-sed -i.bak '/source.*amp.sh/d' ~/.zshrc
+# Remove amp from shell configuration (keeps workspace data)
+amp uninstall
 
-# Remove all amp directories (includes main repo and all worktrees)
+# Remove amp AND all workspace data
+amp uninstall --data
+
+# Silent uninstall (for scripts/automation)
+amp uninstall --data --no-confirm
+```
+
+### Manual uninstall
+
+If `amp` command is not available, you can uninstall manually:
+
+```bash
+# Option 1: Use the uninstall script directly
+curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/uninstall.sh | bash
+
+# Option 2: Manual removal
+# Remove from shell RC files
+sed -i.bak '/# Amplifier (amp command)/d' ~/.bashrc ~/.zshrc
+sed -i.bak '/source.*amp.sh/d' ~/.bashrc ~/.zshrc
+
+# Remove amp directory
 rm -rf ~/.amp
 ```
+
+**What gets removed:**
+- ✅ amp source lines from `~/.bashrc` and `~/.zshrc`
+- ✅ Backups created with `.amp-backup` extension
+- ⚠️ `~/.amp` directory (only with `--data` flag)
+  - Main amplifier repository
+  - All workspace worktrees
+  - Virtual environments and dependencies
+  - AI working files and data
 
 ## Platform Support
 

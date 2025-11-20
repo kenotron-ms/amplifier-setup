@@ -166,6 +166,18 @@ _amp_update() {
         if [[ "$local_sha" != "$remote_sha" ]]; then
             echo "📥 Updates available, pulling changes..."
 
+            # Check if dependency files changed
+            local needs_install=false
+            local changed_files
+            changed_files=$(git diff --name-only HEAD origin/main)
+
+            if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
+                needs_install=true
+                _amp_log "Dependency files changed, will reinstall"
+            else
+                _amp_log "No dependency changes detected, skipping reinstall"
+            fi
+
             if ! git pull origin main --quiet; then
                 _amp_error "Failed to pull updates" \
                     "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
@@ -174,15 +186,18 @@ _amp_update() {
 
             _amp_log "Updated from $local_sha to $remote_sha"
 
-            # Re-install after update
-            echo "🔧 Reinstalling dependencies..."
-            if ! make install >> "$AMP_LOG" 2>&1; then
-                _amp_error "Failed to reinstall after update" \
-                    "Check log: $AMP_LOG"
-                exit 1
+            # Re-install only if dependency files changed
+            if $needs_install; then
+                echo "🔧 Reinstalling dependencies (dependency files changed)..."
+                if ! make install >> "$AMP_LOG" 2>&1; then
+                    _amp_error "Failed to reinstall after update" \
+                        "Check log: $AMP_LOG"
+                    exit 1
+                fi
+                echo "✅ Updated and reinstalled"
+            else
+                echo "✅ Updated (no reinstall needed)"
             fi
-
-            echo "✅ Updated and reinstalled"
         fi
 
         # Update last check timestamp
@@ -254,11 +269,21 @@ _amp_bootstrap() {
         else
             local local_sha
             local remote_sha
+            local needs_install=false
             local_sha=$(git rev-parse HEAD)
             remote_sha=$(git rev-parse origin/main)
 
             if [[ "$local_sha" != "$remote_sha" ]]; then
                 echo "📥 Pulling latest changes..."
+
+                # Check if dependency files will change
+                local changed_files
+                changed_files=$(git diff --name-only HEAD origin/main)
+                if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
+                    needs_install=true
+                    _amp_log "Dependency files changed during bootstrap, will reinstall"
+                fi
+
                 if ! git pull origin main; then
                     echo "⚠️  Warning: Failed to pull updates, using existing version"
                     _amp_log "Warning: Failed to pull during bootstrap"
@@ -273,8 +298,13 @@ _amp_bootstrap() {
         fi
     fi
 
-    # Install dependencies
-    _amp_install || return 1
+    # Install dependencies (always on fresh clone, or if dependencies changed)
+    if [[ ! -f "$AMP_AMPLIFIER_DIR/.venv/bin/activate" ]] || ${needs_install:-true}; then
+        _amp_install || return 1
+    else
+        echo "✅ Dependencies already installed"
+        _amp_log "Skipping install - no dependency changes"
+    fi
 
     # Mark as ready
     touch "$AMP_READY_FLAG"
@@ -323,7 +353,7 @@ _amp_execute() {
     # shellcheck disable=SC1090
     source "$venv_activate"
 
-    # Generate workspace message
+    # Generate workspace system prompt
     local workspace_dir
     workspace_dir="$(pwd)"
 
@@ -337,7 +367,7 @@ _amp_execute() {
     local project_name
     project_name="$(basename "$workspace_dir")"
 
-    local workspace_message="I'm working on the $project_name project. The project is located at $workspace_dir. The $worktree_path directory is the amplifier dev environment for this workspace.
+    local workspace_system_prompt="I'm working on the $project_name project. The project is located at $workspace_dir. The $worktree_path directory is the amplifier dev environment for this workspace.
 
 Please read @$workspace_dir/CLAUDE.md for project-specific guidance.
 
@@ -352,8 +382,8 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
         return 1
     }
 
-    # Execute claude with workspace context and add project directory
-    claude "$workspace_message" --add-dir "$workspace_dir" "$@"
+    # Execute claude with workspace context as system prompt and add project directory
+    claude --append-system-prompt "$workspace_system_prompt" --add-dir "$workspace_dir" "$@"
 
     # Return to original directory after claude exits
     popd > /dev/null
@@ -409,6 +439,19 @@ amp() {
                 return 0
             fi
 
+            # Check if dependency files changed
+            echo "📋 Checking what changed..."
+            local changed_files
+            changed_files=$(git diff --name-only HEAD origin/main)
+            local needs_install=false
+
+            if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
+                needs_install=true
+                echo "   • Dependency files changed - will reinstall"
+            else
+                echo "   • No dependency changes - will skip reinstall"
+            fi
+
             echo "📥 Pulling changes..."
             if ! git pull origin main; then
                 echo "❌ Error: Failed to pull updates"
@@ -416,17 +459,36 @@ amp() {
                 return 1
             fi
 
-            echo "🔧 Reinstalling dependencies..."
-            if ! make install; then
-                echo "❌ Error: Installation failed"
-                return 1
+            if $needs_install; then
+                echo "🔧 Reinstalling dependencies..."
+                if ! make install; then
+                    echo "❌ Error: Installation failed"
+                    return 1
+                fi
+                echo ""
+                echo "✅ Amplifier updated and reinstalled successfully"
+            else
+                echo ""
+                echo "✅ Amplifier updated successfully (no reinstall needed)"
             fi
 
-            echo ""
-            echo "✅ Amplifier updated successfully"
             echo "   From: ${local_sha:0:7}"
             echo "   To:   ${remote_sha:0:7}"
             return 0
+            ;;
+        uninstall)
+            # Delegate to uninstall.sh
+            # Note: This script will remove amp itself
+            local uninstall_script="$(dirname "${BASH_SOURCE[0]}")/uninstall.sh"
+            if [[ -f "$uninstall_script" ]]; then
+                shift  # Remove 'uninstall' from args
+                "$uninstall_script" "$@"
+            else
+                echo "❌ Error: uninstall.sh not found"
+                echo "💡 Try: curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/uninstall.sh | bash"
+                return 1
+            fi
+            return
             ;;
     esac
 

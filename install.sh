@@ -158,38 +158,40 @@ echo "🔄 Reloading shell configuration..."
 # Determine which RC file to reload based on current shell
 if [[ "$SHELL" == */zsh ]]; then
     RELOAD_CMD="source ~/.zshrc"
+    SHELL_NAME="zsh"
     # shellcheck disable=SC1090
     source ~/.zshrc 2>/dev/null || source "$AMP_SCRIPT"
 elif [[ "$SHELL" == */bash ]]; then
     RELOAD_CMD="source ~/.bashrc"
+    SHELL_NAME="bash"
     # shellcheck disable=SC1090
     source ~/.bashrc 2>/dev/null || source "$AMP_SCRIPT"
 else
     RELOAD_CMD="source $AMP_SCRIPT"
+    SHELL_NAME="$(basename "$SHELL")"
     # shellcheck disable=SC1090
     source "$AMP_SCRIPT"
 fi
 
-echo "✅ Shell configuration reloaded"
+echo "✅ Shell configuration reloaded for $SHELL_NAME"
 
 # Show success message
 echo ""
 echo -e "${GREEN}✅ Installation complete!${NC}"
 echo ""
-echo "📝 Usage:"
-echo "  amp              - Start Claude Code with amplifier in current directory"
-echo "  amp --help       - Show Claude Code help"
-echo "  amp \"do X\"       - Run Claude Code with a prompt"
+
+# Provide exact reload command based on detected shell
+echo -e "${YELLOW}⚡ IMPORTANT: Reload your shell to use amp${NC}"
 echo ""
-echo "💡 Notes:"
-echo "  • On first run, amp will automatically:"
-echo "    - Check prerequisites (git, make, python3, uv, claude)"
-echo "    - Clone amplifier repository to ~/.amp/main"
-echo "    - Create a workspace worktree for your project"
-echo "    - Install dependencies"
-echo "  • Updates are checked once per 24 hours"
-echo "  • Each project gets its own isolated worktree in ~/.amp/w/"
+echo "Copy and paste this command:"
 echo ""
-echo "🎯 Try it now:"
-echo "  amp"
+echo -e "${GREEN}  $RELOAD_CMD${NC}"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "🚀 Then cd to any project folder and type:"
+echo ""
+echo -e "${GREEN}  amp${NC}"
+echo ""
+echo "📖 Documentation: https://github.com/kenotron-ms/amplifier-setup#readme"
 echo ""
