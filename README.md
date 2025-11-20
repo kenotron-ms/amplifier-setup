@@ -79,52 +79,7 @@ This will:
 
 **Note**: This installer is idempotent - run it anytime to get the latest version of amp scripts.
 
-**Important**: After updating, reload your shell configuration:
-
-```bash
-# Reload your shell (automatically detects bash or zsh)
-source ~/.${SHELL##*/}rc 2>/dev/null || exec $SHELL
-```
-
-Or manually reload based on your shell:
-```bash
-source ~/.bashrc  # If using bash
-source ~/.zshrc   # If using zsh (macOS default since Catalina)
-```
-
-### Manual Install
-
-1. Download `amp.sh`:
-```bash
-mkdir -p ~/.amp
-curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp.sh -o ~/.amp/amp.sh
-curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp-workspace.sh -o ~/.amp/amp-workspace.sh
-chmod +x ~/.amp/amp.sh ~/.amp/amp-workspace.sh
-```
-
-2. Add to your shell RC file:
-```bash
-# Automatically add to the correct shell RC file
-echo 'source ~/.amp/amp.sh' >> ~/.${SHELL##*/}rc
-```
-
-Or manually add based on your shell:
-```bash
-echo 'source ~/.amp/amp.sh' >> ~/.bashrc  # If using bash
-echo 'source ~/.amp/amp.sh' >> ~/.zshrc   # If using zsh (macOS default)
-```
-
-3. Reload your shell configuration:
-```bash
-# Automatically reload the correct shell
-source ~/.${SHELL##*/}rc 2>/dev/null || exec $SHELL
-```
-
-Or manually reload based on your shell:
-```bash
-source ~/.bashrc  # If using bash
-source ~/.zshrc   # If using zsh (macOS default since Catalina)
-```
+**Note**: The installer will tell you exactly what to run after it completes.
 
 ## Usage
 
@@ -340,8 +295,6 @@ git reset --hard origin/main  # Reset to clean state
 
 ## Uninstall
 
-### Using the amp command (recommended)
-
 ```bash
 # Remove amp from shell configuration (keeps workspace data)
 amp uninstall
@@ -349,35 +302,9 @@ amp uninstall
 # Remove amp AND all workspace data
 amp uninstall --data
 
-# Silent uninstall (for scripts/automation)
-amp uninstall --data --no-confirm
+# View all options
+amp uninstall --help
 ```
-
-### Manual uninstall
-
-If `amp` command is not available, you can uninstall manually:
-
-```bash
-# Option 1: Use the uninstall script directly
-curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/uninstall.sh | bash
-
-# Option 2: Manual removal
-# Remove from shell RC files
-sed -i.bak '/# Amplifier (amp command)/d' ~/.bashrc ~/.zshrc
-sed -i.bak '/source.*amp.sh/d' ~/.bashrc ~/.zshrc
-
-# Remove amp directory
-rm -rf ~/.amp
-```
-
-**What gets removed:**
-- ✅ amp source lines from `~/.bashrc` and `~/.zshrc`
-- ✅ Backups created with `.amp-backup` extension
-- ⚠️ `~/.amp` directory (only with `--data` flag)
-  - Main amplifier repository
-  - All workspace worktrees
-  - Virtual environments and dependencies
-  - AI working files and data
 
 ## Platform Support
 
