@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="amp - A transparent wrapper for Claude Code that automatically manages the Amplifier development environment.">
+    <meta name="theme-color" content="#ffffff">
+    <title>amp - Amplifier Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #ffffff;
+            --bg-secondary: #f9fafb;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border: #e5e7eb;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --code-bg: #1f2937;
+            --code-text: #f3f4f6;
+            --success: #059669;
+            --warning: #d97706;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #111827;
+                --bg-secondary: #1f2937;
+                --text-primary: #f9fafb;
+                --text-secondary: #d1d5db;
+                --text-tertiary: #9ca3af;
+                --border: #374151;
+                --code-bg: #0f172a;
+                --code-text: #e2e8f0;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 48rem;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        p strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 4rem 0;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .hero .tagline {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 32rem;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Install Command */
+        .install-section {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .install-section .label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .install-command {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 0.375rem;
+            font-family: "Monaco", "Menlo", "Courier New", monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .install-command::selection {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border);
+        }
+
+        code {
+            font-family: "Monaco", "Menlo", "Courier New", monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        /* Inline Code */
+        p code, li code {
+            background-color: var(--bg-secondary);
+            color: var(--accent);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 1.5rem 0;
+            padding-left: 2rem;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+        }
+
+        li strong {
+            color: var(--text-primary);
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 3rem;
+        }
+
+        section > p:first-of-type {
+            font-size: 1.0625rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Feature List */
+        .features {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            gap: 1rem;
+        }
+
+        .features li {
+            padding-left: 2rem;
+            position: relative;
+            color: var(--text-secondary);
+        }
+
+        .features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+
+        /* Process Steps */
+        .steps {
+            list-style: none;
+            padding: 0;
+            counter-reset: step-counter;
+        }
+
+        .steps li {
+            counter-increment: step-counter;
+            padding-left: 3rem;
+            position: relative;
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            width: 2rem;
+            height: 2rem;
+            background-color: var(--accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Subsections */
+        .subsection {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .subsection h3 {
+            margin-top: 0;
+        }
+
+        /* Callout */
+        .callout {
+            background-color: var(--bg-secondary);
+            border-left: 4px solid var(--accent);
+            padding: 1rem 1.5rem;
+            border-radius: 0.375rem;
+            margin: 1.5rem 0;
+        }
+
+        .callout strong {
+            color: var(--accent);
+        }
+
+        .callout.warning {
+            border-left-color: var(--warning);
+        }
+
+        .callout.warning strong {
+            color: var(--warning);
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .grid-item {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .grid-item h4 {
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .grid-item p {
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 0.875rem;
+        }
+
+        footer a {
+            color: var(--text-tertiary);
+        }
+
+        footer a:hover {
+            color: var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 0.75rem;
+            }
+
+            h1 {
+                font-size: 1.875rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .hero {
+                padding: 2rem 0;
+            }
+
+            pre {
+                font-size: 0.75rem;
+                padding: 1rem;
+            }
+
+            code {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-small {
+            margin-top: 1rem;
+        }
+
+        .mt-medium {
+            margin-top: 2rem;
+        }
+
+        .mt-large {
+            margin-top: 3rem;
+        }
+
+        .mb-small {
+            margin-bottom: 1rem;
+        }
+
+        .mb-medium {
+            margin-bottom: 2rem;
+        }
+
+        .mb-large {
+            margin-bottom: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>amp</h1>
+            <p class="tagline">
+                A transparent wrapper for Claude Code that automatically manages the Amplifier development environment.
+            </p>
+            <div class="install-section">
+                <span class="label">Install with one line:</span>
+                <div class="install-command">curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash</div>
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.875rem;">
+                <strong>That's it!</strong> Use <code>amp</code> exactly like you would use <code>claude</code>.
+            </p>
+        </section>
+
+        <!-- Quick Overview -->
+        <section id="overview">
+            <h2>What is amp?</h2>
+            <p>
+                <code>amp</code> is a command that you use exactly like <code>claude</code>, but with all the Amplifier complexity handled automatically behind the scenes.
+            </p>
+
+            <h3>The Problem</h3>
+            <p>
+                Setting up and maintaining the Amplifier environment involves many manual steps:
+            </p>
+            <ul>
+                <li>Cloning the Amplifier repository</li>
+                <li>Running <code>make install</code> after every clone/update</li>
+                <li>Activating the virtual environment</li>
+                <li>Providing workspace context to Claude Code</li>
+                <li>Managing updates</li>
+            </ul>
+            <p>
+                This creates friction, especially for non-technical users.
+            </p>
+
+            <h3>The Solution</h3>
+            <p>
+                <code>amp</code> is a direct replacement for the <code>claude</code> command that:
+            </p>
+            <ul class="features">
+                <li>Installs Amplifier automatically on first run</li>
+                <li>Updates Amplifier daily (when needed)</li>
+                <li>Activates the virtual environment automatically</li>
+                <li>Provides proper workspace context to Claude Code</li>
+                <li>Passes through all <code>claude</code> arguments transparently</li>
+            </ul>
+            <div class="callout">
+                <strong>You just type <code>amp</code> instead of <code>claude</code> — that's it.</strong>
+            </div>
+        </section>
+
+        <!-- Installation -->
+        <section id="installation">
+            <h2>Installation</h2>
+
+            <h3>Prerequisites</h3>
+            <p>Before installing <code>amp</code>, ensure you have:</p>
+            <ul>
+                <li><strong>git</strong> — <a href="https://git-scm.com/downloads">Installation</a></li>
+                <li><strong>make</strong> — Usually pre-installed on macOS/Linux</li>
+                <li><strong>python3</strong> — <a href="https://www.python.org/downloads/">Installation</a></li>
+                <li><strong>uv</strong> — <a href="https://docs.astral.sh/uv/getting-started/installation/">Installation</a></li>
+                <li><strong>claude</strong> — <a href="https://docs.anthropic.com/en/docs/claude-code/install">Installation</a></li>
+            </ul>
+
+            <h3>Install</h3>
+            <p>Copy and paste this into your terminal:</p>
+            <pre><code>curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash</code></pre>
+            <p>This will:</p>
+            <ol class="steps">
+                <li>Download the latest <code>amp.sh</code> and <code>amp-workspace.sh</code> to <code>~/.amp/</code></li>
+                <li>Add it to your <code>~/.bashrc</code> and <code>~/.zshrc</code></li>
+                <li>Make it available immediately in your current shell</li>
+            </ol>
+            <div class="callout">
+                <strong>Note:</strong> This installer is idempotent — run it anytime to get the latest version of the amp scripts.
+            </div>
+        </section>
+
+        <!-- Usage -->
+        <section id="usage">
+            <h2>Usage</h2>
+
+            <h3>Basic Commands</h3>
+            <p>Use <code>amp</code> exactly like you would use <code>claude</code>:</p>
+            <pre><code># Start Claude Code in current directory
+amp
+
+# Run with a prompt
+amp "implement feature X"
+
+# Pass any claude arguments
+amp --help
+amp --model opus
+amp "analyze this code" --add-dir ../other-project</code></pre>
+
+            <div class="subsection">
+                <h3>Create New Projects</h3>
+                <pre><code># Initialize current directory as an Amplifier project
+amp new
+
+# Create a new project directory
+amp new my-project
+
+# Creates:
+# - CLAUDE.md with project guidance
+# - Git repository (if git is available)
+# - Offers to create GitHub repo (if gh CLI is available)</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h3>Workspace Management</h3>
+                <pre><code># List all workspace worktrees
+amp workspace list
+
+# Show info about current workspace
+amp workspace info
+
+# Remove a workspace worktree
+amp workspace remove
+amp workspace remove /path/to/project</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h3>Update</h3>
+                <pre><code># Update everything (Amplifier + amp scripts)
+amp update
+
+# Then reload your shell to use updated scripts
+source ~/.zshrc  # or source ~/.bashrc</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h3>Uninstall</h3>
+                <pre><code># Remove amp (keeps workspace data)
+amp uninstall
+
+# Remove amp and all workspace data
+amp uninstall --data
+
+# View uninstall options
+amp uninstall --help</code></pre>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section id="how-it-works">
+            <h2>How It Works</h2>
+
+            <h3>First Run</h3>
+            <p>On your first <code>amp</code> command, it will automatically:</p>
+            <ol class="steps">
+                <li>Check that prerequisites are installed</li>
+                <li>Clone the Amplifier repository to <code>~/.amp/main</code></li>
+                <li>Run <code>make install</code> to set up dependencies</li>
+                <li>Create a workspace worktree for your current directory</li>
+                <li>Launch Claude Code with proper workspace context</li>
+            </ol>
+            <p>This takes about 2-5 minutes depending on your network speed.</p>
+
+            <h3>Subsequent Runs</h3>
+            <p>After the first run, <code>amp</code> is fast:</p>
+            <ul class="features">
+                <li>Checks for updates once per 24 hours</li>
+                <li>If updates are available, pulls and reinstalls automatically</li>
+                <li>Otherwise, launches immediately</li>
+            </ul>
+
+            <h3>Workspace Pattern</h3>
+            <p>
+                When you run <code>amp</code> from any directory, it automatically provides Claude Code with workspace context. This tells Claude Code:
+            </p>
+            <ul>
+                <li>What project you're working on</li>
+                <li>Where the project is located</li>
+                <li>Where the Amplifier dev environment is (separate from your project)</li>
+                <li>To look for <code>CLAUDE.md</code> for project-specific instructions</li>
+                <li>To use your current directory as the working directory</li>
+            </ul>
+
+            <h3>File Structure</h3>
+            <p>Each project gets its own isolated Amplifier worktree:</p>
+            <pre><code>~/.amp/                          # State directory
+├── amp.sh                       # The amp command
+├── amp-workspace.sh             # Workspace management
+├── .amp_ready                   # Flag: bootstrap completed
+├── .amp_last_check              # Timestamp of last update check
+└── w/                           # Workspace worktrees
+    └── Users-ken-projects-foo/  # Worktree for /Users/ken/projects/foo
+        ├── .venv/               # Isolated Python environment
+        ├── amplifier/           # Amplifier modules
+        └── Makefile             # Full Amplifier functionality
+
+~/.amp/main/                     # Main Amplifier repository
+├── .venv/                       # Main virtual environment
+└── amplifier/                   # Amplifier modules</code></pre>
+        </section>
+
+        <!-- Troubleshooting -->
+        <section id="troubleshooting">
+            <h2>Troubleshooting</h2>
+
+            <h3>Check the Log</h3>
+            <p>If something goes wrong, check the log:</p>
+            <pre><code>tail -f ~/.amp/.amp.log</code></pre>
+
+            <h3>Common Issues</h3>
+
+            <div class="subsection">
+                <h4>Missing required tools</h4>
+                <p>Install the missing prerequisites:</p>
+                <ul>
+                    <li><strong>git:</strong> <a href="https://git-scm.com/downloads">https://git-scm.com/downloads</a></li>
+                    <li><strong>make:</strong> <code>xcode-select --install</code> (macOS) or via package manager (Linux)</li>
+                    <li><strong>python3:</strong> <a href="https://www.python.org/downloads/">https://www.python.org/downloads/</a></li>
+                    <li><strong>uv:</strong> <a href="https://docs.astral.sh/uv/getting-started/installation/">https://docs.astral.sh/uv/getting-started/installation/</a></li>
+                    <li><strong>claude:</strong> <a href="https://docs.anthropic.com/en/docs/claude-code/install">https://docs.anthropic.com/en/docs/claude-code/install</a></li>
+                </ul>
+            </div>
+
+            <div class="subsection">
+                <h4>Virtual environment not found</h4>
+                <p>The installation may have been interrupted:</p>
+                <pre><code>rm ~/.amp/.amp_ready
+amp  # Will retry installation</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h4>Failed to pull updates</h4>
+                <p>Network issue or local changes in Amplifier repo:</p>
+                <pre><code>cd ~/.amp/main
+git status  # Check for local changes
+git reset --hard origin/main  # Reset to clean state</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h4>Force Reinstall</h4>
+                <p>If the Amplifier installation is corrupted:</p>
+                <pre><code>rm ~/.amp/.amp_ready
+amp  # Will trigger full bootstrap</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h4>Complete Reinstall</h4>
+                <p>To start from scratch:</p>
+                <pre><code>rm -rf ~/.amp
+amp  # Will re-clone and install everything</code></pre>
+            </div>
+        </section>
+
+        <!-- Configuration -->
+        <section id="configuration">
+            <h2>Configuration</h2>
+
+            <h3>Environment Variables</h3>
+            <pre><code># Override state directory (default: ~/.amp)
+export AMP_HOME="$HOME/.my-amp"
+
+# Override Amplifier clone location (default: ~/.amp/main)
+export AMP_AMPLIFIER_DIR="$HOME/.my-amp/main"
+
+amp</code></pre>
+
+            <h3>Update Frequency</h3>
+            <p>By default, <code>amp</code> checks for updates once per 24 hours. To force an update check:</p>
+            <pre><code>rm ~/.amp/.amp_last_check
+amp</code></pre>
+        </section>
+
+        <!-- Platform Support -->
+        <section id="platform-support">
+            <h2>Platform Support</h2>
+            <div class="grid">
+                <div class="grid-item">
+                    <h4>macOS</h4>
+                    <p>bash & zsh supported</p>
+                </div>
+                <div class="grid-item">
+                    <h4>Linux</h4>
+                    <p>bash & zsh supported</p>
+                </div>
+                <div class="grid-item">
+                    <h4>Windows</h4>
+                    <p>Not yet supported</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Links -->
+        <section id="links">
+            <h2>Resources</h2>
+            <ul>
+                <li><a href="https://github.com/kenotron-ms/amplifier-setup">amplifier-setup repository</a> — Contribution guidelines</li>
+                <li><a href="https://github.com/microsoft/amplifier">Amplifier</a> — The underlying development environment</li>
+                <li><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a> — Anthropic's AI coding assistant</li>
+            </ul>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>
+                Made with care to simplify Amplifier setup •
+                <a href="https://github.com/kenotron-ms/amplifier-setup">GitHub</a>
+            </p>
+            <p style="margin-top: 0.5rem;">
+                Licensed under the MIT License
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
