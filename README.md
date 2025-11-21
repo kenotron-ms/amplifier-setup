@@ -149,6 +149,9 @@ amp workspace info
 # Remove a workspace worktree
 amp workspace remove
 amp workspace remove /path/to/project
+
+# Clean up orphaned workspaces (project directories deleted)
+amp workspace prune
 ```
 
 ### Update

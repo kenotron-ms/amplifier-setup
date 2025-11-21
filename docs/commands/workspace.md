@@ -64,6 +64,33 @@ amp workspace remove /path/to/project
 
 ?> **Note:** This only removes the worktree in `~/.amp/w/`, not your actual project files.
 
+### Prune Orphaned Workspaces
+
+Clean up workspaces whose project directories no longer exist:
+
+```bash
+amp workspace prune
+```
+
+Example output:
+```
+🔍 Scanning for orphaned workspaces...
+
+Found 2 orphaned workspace(s):
+
+  • Users-ken-old-project (1.2G)
+  • Users-ken-deleted-app (856M)
+
+Remove these orphaned workspaces? [y/N]: y
+
+🗑️  Removing Users-ken-old-project...
+🗑️  Removing Users-ken-deleted-app...
+
+✅ Removed 2 orphaned workspace(s)
+```
+
+This is useful when you've deleted project directories and want to reclaim disk space.
+
 ## Workspace Structure
 
 ```

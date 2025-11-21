@@ -225,6 +225,85 @@ _amp_workspace_info() {
     fi
 }
 
+# Prune orphaned workspace worktrees
+_amp_prune_workspaces() {
+    local workspace_base="$AMP_HOME/w"
+
+    if [[ ! -d "$workspace_base" ]]; then
+        echo "No workspaces found to prune"
+        return 0
+    fi
+
+    echo "🔍 Scanning for orphaned workspaces..."
+    echo ""
+
+    local orphaned=()
+    local checked=0
+
+    # Check each worktree directory
+    for worktree_path in "$workspace_base"/*; do
+        [[ -d "$worktree_path" ]] || continue
+
+        checked=$((checked + 1))
+        local workspace_name="${worktree_path##*/}"
+
+        # A worktree is orphaned if git worktree list doesn't show it
+        # (meaning git already knows it's broken/missing)
+        if ! (cd "$AMP_AMPLIFIER_DIR" && git worktree list) | grep -q "$worktree_path"; then
+            orphaned+=("$worktree_path:$workspace_name")
+        fi
+    done
+
+    if [[ ${#orphaned[@]} -eq 0 ]]; then
+        echo "✅ No orphaned workspaces found ($checked checked)"
+        return 0
+    fi
+
+    echo "Found ${#orphaned[@]} orphaned workspace(s):"
+    echo ""
+
+    for item in "${orphaned[@]}"; do
+        local path="${item%%:*}"
+        local name="${item##*:}"
+        local size
+        if command -v du >/dev/null 2>&1; then
+            size=$(du -sh "$path" 2>/dev/null | awk '{print $1}')
+        else
+            size="unknown"
+        fi
+        echo "  • $name ($size)"
+    done
+
+    echo ""
+    echo -n "Remove these orphaned workspaces? [y/N]: "
+    read -r REPLY
+    echo ""
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Cancelled - no workspaces removed"
+        return 0
+    fi
+
+    # Remove orphaned workspaces
+    local removed=0
+    for item in "${orphaned[@]}"; do
+        local path="${item%%:*}"
+        local name="${item##*:}"
+
+        echo "🗑️  Removing $name..."
+
+        # Try to remove from git worktree list (may already be gone)
+        (cd "$AMP_AMPLIFIER_DIR" && git worktree remove "$path" --force 2>/dev/null) || true
+
+        # Remove directory
+        rm -rf "$path"
+        removed=$((removed + 1))
+    done
+
+    echo ""
+    echo "✅ Removed $removed orphaned workspace(s)"
+}
+
 # Command dispatcher for workspace subcommands
 amp_workspace() {
     local subcommand="${1:-list}"
@@ -240,6 +319,9 @@ amp_workspace() {
         remove)
             _amp_remove_worktree "$@"
             ;;
+        prune)
+            _amp_prune_workspaces
+            ;;
         *)
             echo "Usage: amp workspace <command>"
             echo ""
@@ -247,6 +329,7 @@ amp_workspace() {
             echo "  list              List all workspace worktrees"
             echo "  info              Show info for current workspace"
             echo "  remove [path]     Remove a workspace worktree (default: current directory)"
+            echo "  prune             Remove orphaned workspaces (interactive)"
             echo ""
             echo "Note: Each workspace is a full amplifier git worktree with isolated:"
             echo "  • .venv (Python virtual environment)"
