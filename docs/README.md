@@ -4,13 +4,23 @@
 
 ## Quick Start
 
-**Install in one line:**
+**Step 1: Install**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
 ```
 
-After installation completes, reload your shell with the command it shows you, then:
+**Step 2: Reload your shell**
+
+The installer will show you an exact command like this:
+
+```bash
+source ~/.zshrc
+```
+
+Copy and paste that command to reload your shell.
+
+**Step 3: Use it**
 
 ```bash
 cd ~/your-project
