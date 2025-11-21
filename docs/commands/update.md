@@ -32,18 +32,17 @@ $ amp update
 
 ⚡ To use updated scripts, reload your shell:
 
-  source ~/.zshrc
+  source ~/.${SHELL##*/}rc
 
 Or just restart your terminal.
 ```
 
 ## After Update
 
-You must reload your shell to use the updated scripts:
+Reload your shell to use the updated scripts:
 
 ```bash
-source ~/.zshrc  # for zsh (macOS default)
-source ~/.bashrc # for bash
+source ~/.${SHELL##*/}rc
 ```
 
 Or just restart your terminal.

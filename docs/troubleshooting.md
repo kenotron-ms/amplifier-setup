@@ -51,8 +51,7 @@ git reset --hard origin/main  # Reset to clean state
 **Solution:** Reload your shell:
 
 ```bash
-source ~/.zshrc   # for zsh (macOS default)
-source ~/.bashrc  # for bash
+source ~/.${SHELL##*/}rc
 ```
 
 Or restart your terminal.

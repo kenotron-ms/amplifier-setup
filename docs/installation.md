@@ -15,13 +15,13 @@ The installer will:
 
 ## After Installation
 
-The installer will show you the exact command to reload your shell. It will look like:
+Copy and paste this command to reload your shell (works for bash and zsh):
 
 ```bash
-source ~/.zshrc
+source ~/.${SHELL##*/}rc
 ```
 
-Copy and paste that command, then you're ready to use `amp`!
+Then you're ready to use `amp`!
 
 ## Verification
 
