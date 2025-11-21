@@ -14,13 +14,11 @@ curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/in
 
 **Step 2: Reload your shell**
 
-The installer will show you an exact command like this:
+Copy and paste this command (works for bash and zsh):
 
 ```bash
-source ~/.zshrc
+source ~/.${SHELL##*/}rc
 ```
-
-Copy and paste that command to reload your shell.
 
 **Step 3: Use it**
 
