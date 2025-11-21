@@ -588,7 +588,8 @@ CLAUDE_MD_EOF
                         echo ""
                         echo "🐙 Create GitHub repository?"
                         echo "   Suggested: $gh_username/$project_name"
-                        read -p "   Create? [y/N]: " -n 1 -r
+                        echo -n "   Create? [y/N]: "
+                        read -r REPLY
                         echo ""
 
                         if [[ $REPLY =~ ^[Yy]$ ]]; then
