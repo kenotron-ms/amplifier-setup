@@ -121,10 +121,8 @@ _amp_list_workspaces() {
     (
         cd "$AMP_AMPLIFIER_DIR" || exit 1
         git worktree list | grep "$workspace_base" | while read -r path branch rest; do
-            local workspace_name
-            workspace_name="$(basename "$path")"
-            local branch_name
-            branch_name=$(echo "$branch" | /usr/bin/sed 's/[\[\]]//g')
+            workspace_name="${path##*/}"
+            branch_name="${branch//[\[\]]/}"
 
             printf "%-30s %s\n" "$workspace_name" "$path"
             printf "  Branch: %s\n\n" "$branch_name"
