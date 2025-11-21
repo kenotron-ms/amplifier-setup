@@ -490,6 +490,143 @@ amp() {
             fi
             return
             ;;
+        new)
+            # Create a new Amplifier project
+            shift  # Remove 'new' from args
+
+            local project_path="${1:-.}"
+            local target_dir
+            local project_name
+
+            # Resolve target directory and project name
+            if [[ "$project_path" == "." ]]; then
+                target_dir="$(pwd)"
+                project_name="$(basename "$target_dir")"
+                echo "🚀 Initializing Amplifier project: $project_name"
+                echo "   Location: $target_dir"
+            else
+                target_dir="$(cd "$(dirname "$project_path")" 2>/dev/null && pwd)/$(basename "$project_path")"
+                project_name="$(basename "$project_path")"
+                echo "🚀 Creating new Amplifier project: $project_name"
+                echo "   Location: $target_dir"
+
+                # Create directory
+                mkdir -p "$target_dir" || {
+                    echo "❌ Error: Could not create directory: $target_dir"
+                    return 1
+                }
+                echo "📁 Created directory"
+            fi
+
+            # Create CLAUDE.md
+            local claude_md="$target_dir/CLAUDE.md"
+            if [[ -f "$claude_md" ]]; then
+                echo "📄 CLAUDE.md already exists, skipping"
+            else
+                cat > "$claude_md" << 'CLAUDE_MD_EOF'
+# CLAUDE.md
+
+Project-specific guidance for AI assistants working in this repository.
+
+## Development Philosophy
+
+This project follows Flow-Driven Development principles. See @ai_context/flow/FLOW_DRIVEN_DEVELOPMENT.md for the complete methodology.
+
+### Key Principles
+
+- **Flow state over rigid process** - Adapt tools to support deep work
+- **Ultra-thinking for complex tasks** - Use `/ultrathink-task` for multi-step problems
+- **Verification-driven development** - Validate assumptions continuously
+- **Modular design** - Build in self-contained, regenerable pieces
+
+### Workflow Commands
+
+When working on complex features or debugging:
+
+1. **Plan first**: Use `/ultrathink-task` to break down the problem
+2. **Verify continuously**: Test assumptions as you build
+3. **Document decisions**: Update this file with project-specific patterns
+
+## Project-Specific Guidelines
+
+Add your project's specific instructions here:
+
+- Build command: [e.g., `make build`]
+- Test command: [e.g., `make test`]
+- Code style guidelines
+- Important patterns
+
+## Resources
+
+- Flow-Driven Development: @ai_context/flow/FLOW_DRIVEN_DEVELOPMENT.md
+- Amplifier: https://github.com/microsoft/amplifier
+CLAUDE_MD_EOF
+                echo "📄 Created CLAUDE.md"
+            fi
+
+            # Initialize git if not already
+            if [[ -d "$target_dir/.git" ]]; then
+                echo "📦 Git already initialized"
+            else
+                if command -v git &> /dev/null; then
+                    (cd "$target_dir" && git init) > /dev/null 2>&1
+                    echo "📦 Initialized git repository"
+                else
+                    echo "💡 Git not found, skipping initialization"
+                fi
+            fi
+
+            # Offer GitHub repo creation
+            if command -v gh &> /dev/null; then
+                # Check if gh is authenticated
+                if gh auth status &> /dev/null; then
+                    # Get GitHub username
+                    local gh_username
+                    gh_username=$(gh api user --jq .login 2>/dev/null)
+
+                    if [[ -n "$gh_username" ]]; then
+                        echo ""
+                        echo "🐙 Create GitHub repository?"
+                        echo "   Suggested: $gh_username/$project_name"
+                        read -p "   Create? [y/N]: " -n 1 -r
+                        echo ""
+
+                        if [[ $REPLY =~ ^[Yy]$ ]]; then
+                            if (cd "$target_dir" && gh repo create "$gh_username/$project_name" --private --source=. 2>&1); then
+                                echo "✅ Created GitHub repository: $gh_username/$project_name"
+                            else
+                                echo "⚠️  Failed to create repository"
+                                echo "   Create manually: gh repo create $gh_username/$project_name --private --source=."
+                            fi
+                        else
+                            echo "   Skipped GitHub repo creation"
+                        fi
+                    fi
+                else
+                    echo "💡 Run 'gh auth login' to enable GitHub repo creation"
+                fi
+            else
+                echo "💡 Install 'gh' CLI to enable GitHub repo creation"
+            fi
+
+            # Success summary
+            echo ""
+            echo "✨ Project ready!"
+            echo ""
+            if [[ "$project_path" != "." ]]; then
+                echo "Next steps:"
+                echo "  cd $project_name"
+                echo "  # Edit CLAUDE.md with your project details"
+                echo "  amp"
+            else
+                echo "Next steps:"
+                echo "  # Edit CLAUDE.md with your project details"
+                echo "  amp"
+            fi
+            echo ""
+
+            return 0
+            ;;
     esac
 
     # Check if bootstrap is needed

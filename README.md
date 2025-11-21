@@ -100,6 +100,21 @@ amp --model opus
 amp "analyze this code" --add-dir ../other-project
 ```
 
+### Creating New Projects
+
+```bash
+# Initialize current directory as an Amplifier project
+amp new
+
+# Create a new project directory
+amp new my-project
+
+# Creates:
+# - CLAUDE.md with Flow-Driven Development guidance
+# - Git repository (if git is available)
+# - Offers to create GitHub repo (if gh CLI is available)
+```
+
 ### Workspace Management
 
 ```bash
