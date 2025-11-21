@@ -4,6 +4,8 @@
 
 ## Quick Start
 
+### One-Time Installation
+
 **Step 1: Install**
 
 ```bash
@@ -18,14 +20,28 @@ Copy and paste this command (works for bash and zsh):
 source ~/.${SHELL##*/}rc
 ```
 
-**Step 3: Use it**
+**Step 3: Done!**
+
+Installation complete. You only need to do this once.
+
+---
+
+### Everyday Use
+
+Every time you want to work with Claude Code + Amplifier:
 
 ```bash
 cd ~/your-project
 amp
 ```
 
-**That's it!** Use `amp` exactly like you would use `claude`.
+**That's it!** Use `amp` exactly like you would use `claude`:
+
+```bash
+amp "implement feature X"
+amp --model opus
+amp --help
+```
 
 ---
 
