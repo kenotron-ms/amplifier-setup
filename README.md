@@ -129,14 +129,14 @@ amp workspace remove
 amp workspace remove /path/to/project
 ```
 
-### Update amp Scripts
+### Update
 
 ```bash
-# Update amp.sh and amp-workspace.sh to latest version
-curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash
-
-# Force update amplifier repository (pulls from origin/main)
+# Update everything (amplifier + amp scripts)
 amp update
+
+# Then reload your shell to use updated scripts
+source ~/.zshrc  # or source ~/.bashrc
 ```
 
 ### Uninstall

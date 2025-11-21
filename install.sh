@@ -14,6 +14,12 @@
 
 set -e
 
+# Check for update mode (skip shell RC modifications)
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+    UPDATE_MODE=true
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -99,99 +105,108 @@ else
     echo "✅ Downloaded latest scripts"
 fi
 
-# Add to shell RC files
-echo ""
-echo "🔧 Configuring shell..."
+# Add to shell RC files (skip in update mode)
+if ! $UPDATE_MODE; then
+    echo ""
+    echo "🔧 Configuring shell..."
 
-# Clean up old references first (from previous versions)
-for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    if [[ -f "$RC_FILE" ]]; then
-        # Remove old .amplifier references
-        if grep -q "\.amplifier" "$RC_FILE" 2>/dev/null; then
-            echo "  🧹 Removing old .amplifier references from $(basename "$RC_FILE")..."
-            sed -i.bak '/\.amplifier/d' "$RC_FILE"
+    # Clean up old references first (from previous versions)
+    for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        if [[ -f "$RC_FILE" ]]; then
+            # Remove old .amplifier references
+            if grep -q "\.amplifier" "$RC_FILE" 2>/dev/null; then
+                echo "  🧹 Removing old .amplifier references from $(basename "$RC_FILE")..."
+                sed -i.bak '/\.amplifier/d' "$RC_FILE"
+                rm -f "${RC_FILE}.bak"
+            fi
+            # Remove old amp comment lines
+            sed -i.bak '/# Amplifier (amp command)/d' "$RC_FILE" 2>/dev/null || true
             rm -f "${RC_FILE}.bak"
         fi
-        # Remove old amp comment lines
-        sed -i.bak '/# Amplifier (amp command)/d' "$RC_FILE" 2>/dev/null || true
-        rm -f "${RC_FILE}.bak"
-    fi
-done
+    done
 
-SOURCE_LINE="source $AMP_SCRIPT"
-COMMENT_LINE="# Amplifier (amp command)"
+    SOURCE_LINE="source $AMP_SCRIPT"
+    COMMENT_LINE="# Amplifier (amp command)"
 
-for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    # Only modify if the file exists or is the primary shell
-    SHOULD_UPDATE=false
+    for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        # Only modify if the file exists or is the primary shell
+        SHOULD_UPDATE=false
 
-    if [[ -f "$RC_FILE" ]]; then
-        SHOULD_UPDATE=true
-    elif [[ "$RC_FILE" == "$HOME/.bashrc" ]] && [[ "$SHELL" == */bash ]]; then
-        SHOULD_UPDATE=true
-        touch "$RC_FILE"
-    elif [[ "$RC_FILE" == "$HOME/.zshrc" ]] && [[ "$SHELL" == */zsh ]]; then
-        SHOULD_UPDATE=true
-        touch "$RC_FILE"
-    fi
-
-    if $SHOULD_UPDATE; then
-        # Check if already configured
-        if grep -q "source.*amp.sh" "$RC_FILE" 2>/dev/null; then
-            echo "  ✓ $(basename "$RC_FILE") already configured"
-        else
-            # Add source line
-            {
-                echo ""
-                echo "$COMMENT_LINE"
-                echo "$SOURCE_LINE"
-            } >> "$RC_FILE"
-            echo "  ✅ Added to $(basename "$RC_FILE")"
+        if [[ -f "$RC_FILE" ]]; then
+            SHOULD_UPDATE=true
+        elif [[ "$RC_FILE" == "$HOME/.bashrc" ]] && [[ "$SHELL" == */bash ]]; then
+            SHOULD_UPDATE=true
+            touch "$RC_FILE"
+        elif [[ "$RC_FILE" == "$HOME/.zshrc" ]] && [[ "$SHELL" == */zsh ]]; then
+            SHOULD_UPDATE=true
+            touch "$RC_FILE"
         fi
-    fi
-done
 
-# Reload shell config to load amp command
-echo ""
-echo "🔄 Reloading shell configuration..."
-
-# Determine which RC file to reload based on current shell
-if [[ "$SHELL" == */zsh ]]; then
-    RELOAD_CMD="source ~/.zshrc"
-    SHELL_NAME="zsh"
-    # shellcheck disable=SC1090
-    source ~/.zshrc 2>/dev/null || source "$AMP_SCRIPT"
-elif [[ "$SHELL" == */bash ]]; then
-    RELOAD_CMD="source ~/.bashrc"
-    SHELL_NAME="bash"
-    # shellcheck disable=SC1090
-    source ~/.bashrc 2>/dev/null || source "$AMP_SCRIPT"
+        if $SHOULD_UPDATE; then
+            # Check if already configured
+            if grep -q "source.*amp.sh" "$RC_FILE" 2>/dev/null; then
+                echo "  ✓ $(basename "$RC_FILE") already configured"
+            else
+                # Add source line
+                {
+                    echo ""
+                    echo "$COMMENT_LINE"
+                    echo "$SOURCE_LINE"
+                } >> "$RC_FILE"
+                echo "  ✅ Added to $(basename "$RC_FILE")"
+            fi
+        fi
+    done
 else
-    RELOAD_CMD="source $AMP_SCRIPT"
-    SHELL_NAME="$(basename "$SHELL")"
-    # shellcheck disable=SC1090
-    source "$AMP_SCRIPT"
+    echo ""
+    echo "🔧 Scripts updated..."
 fi
-
-echo "✅ Shell configuration reloaded for $SHELL_NAME"
 
 # Show success message
 echo ""
-echo -e "${GREEN}✅ Installation complete!${NC}"
-echo ""
+if $UPDATE_MODE; then
+    echo -e "${GREEN}✅ Scripts updated!${NC}"
+else
+    # Reload shell config to load amp command
+    echo "🔄 Reloading shell configuration..."
 
-# Provide exact reload command based on detected shell
-echo -e "${YELLOW}⚡ IMPORTANT: Reload your shell to use amp${NC}"
-echo ""
-echo "Copy and paste this command:"
-echo ""
-echo -e "${GREEN}  $RELOAD_CMD${NC}"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "🚀 Then cd to any project folder and type:"
-echo ""
-echo -e "${GREEN}  amp${NC}"
-echo ""
-echo "📖 Documentation: https://github.com/kenotron-ms/amplifier-setup#readme"
-echo ""
+    # Determine which RC file to reload based on current shell
+    if [[ "$SHELL" == */zsh ]]; then
+        RELOAD_CMD="source ~/.zshrc"
+        SHELL_NAME="zsh"
+        # shellcheck disable=SC1090
+        source ~/.zshrc 2>/dev/null || source "$AMP_SCRIPT"
+    elif [[ "$SHELL" == */bash ]]; then
+        RELOAD_CMD="source ~/.bashrc"
+        SHELL_NAME="bash"
+        # shellcheck disable=SC1090
+        source ~/.bashrc 2>/dev/null || source "$AMP_SCRIPT"
+    else
+        RELOAD_CMD="source $AMP_SCRIPT"
+        SHELL_NAME="$(basename "$SHELL")"
+        # shellcheck disable=SC1090
+        source "$AMP_SCRIPT"
+    fi
+
+    echo "✅ Shell configuration reloaded for $SHELL_NAME"
+
+    echo ""
+    echo -e "${GREEN}✅ Installation complete!${NC}"
+    echo ""
+
+    # Provide exact reload command based on detected shell
+    echo -e "${YELLOW}⚡ IMPORTANT: Reload your shell to use amp${NC}"
+    echo ""
+    echo "Copy and paste this command:"
+    echo ""
+    echo -e "${GREEN}  $RELOAD_CMD${NC}"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "🚀 Then cd to any project folder and type:"
+    echo ""
+    echo -e "${GREEN}  amp${NC}"
+    echo ""
+    echo "📖 Documentation: https://github.com/kenotron-ms/amplifier-setup#readme"
+    echo ""
+fi

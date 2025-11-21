@@ -411,8 +411,12 @@ amp() {
             return
             ;;
         update)
-            # Force update of amplifier main repo
-            echo "🔄 Forcing amplifier update..."
+            # Update both amplifier and amp scripts
+            echo "🔄 Updating amp..."
+            echo ""
+
+            # Part 1: Update amplifier repository
+            echo "📦 Updating amplifier repository..."
             rm -f "$AMP_LAST_CHECK"  # Force update check
 
             if [[ ! -d "$AMP_AMPLIFIER_DIR" ]]; then
@@ -423,8 +427,7 @@ amp() {
 
             cd "$AMP_AMPLIFIER_DIR" || return 1
 
-            echo "📥 Fetching latest changes..."
-            if ! git fetch origin main; then
+            if ! git fetch origin main --quiet 2>&1; then
                 echo "❌ Error: Failed to fetch updates"
                 return 1
             fi
@@ -434,46 +437,77 @@ amp() {
             local_sha=$(git rev-parse HEAD)
             remote_sha=$(git rev-parse origin/main)
 
-            if [[ "$local_sha" == "$remote_sha" ]]; then
-                echo "✅ Already up to date"
+            if [[ "$local_sha" != "$remote_sha" ]]; then
+                # Check if dependency files changed
+                local changed_files
+                changed_files=$(git diff --name-only HEAD origin/main)
+                local needs_install=false
+
+                if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
+                    needs_install=true
+                fi
+
+                if ! git pull origin main --quiet; then
+                    echo "❌ Error: Failed to pull updates"
+                    return 1
+                fi
+
+                if $needs_install; then
+                    echo "   • Installing dependencies..."
+                    if ! make install >> "$AMP_LOG" 2>&1; then
+                        echo "❌ Error: Installation failed"
+                        return 1
+                    fi
+                fi
+
+                echo "   ✅ Amplifier updated (${local_sha:0:7} → ${remote_sha:0:7})"
+            else
+                echo "   ✅ Amplifier already up to date"
+            fi
+
+            # Part 2: Update amp scripts
+            echo ""
+            echo "📝 Updating amp scripts..."
+
+            # Check if GitHub is reachable
+            if ! curl -s --head --max-time 5 https://github.com > /dev/null 2>&1; then
+                echo "   ⚠️  GitHub unreachable, skipping script update"
+                echo ""
+                echo "✅ Amplifier updated (scripts unchanged)"
                 return 0
             fi
 
-            # Check if dependency files changed
-            echo "📋 Checking what changed..."
-            local changed_files
-            changed_files=$(git diff --name-only HEAD origin/main)
-            local needs_install=false
+            # Use install.sh in update mode
+            local install_script="$(dirname "${BASH_SOURCE[0]}")/install.sh"
+            if [[ ! -f "$install_script" ]]; then
+                # Download install.sh if missing
+                echo "   • Downloading install.sh..."
+                curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh \
+                     -o "$install_script" 2>/dev/null
+                chmod +x "$install_script"
+            fi
 
-            if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
-                needs_install=true
-                echo "   • Dependency files changed - will reinstall"
+            # Run install.sh in update mode (suppresses most output)
+            if "$install_script" --update >> "$AMP_LOG" 2>&1; then
+                echo "   ✅ Scripts updated"
             else
-                echo "   • No dependency changes - will skip reinstall"
+                echo "   ⚠️  Script update failed (see $AMP_LOG)"
+                echo "   Your current scripts continue working"
             fi
 
-            echo "📥 Pulling changes..."
-            if ! git pull origin main; then
-                echo "❌ Error: Failed to pull updates"
-                echo "💡 Try: cd $AMP_AMPLIFIER_DIR && git status"
-                return 1
-            fi
+            # Success message with reload instructions
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "✅ Update complete!"
+            echo ""
+            echo "⚡ To use updated scripts, reload your shell:"
+            echo ""
+            echo -e "${GREEN}  source ~/.${SHELL##*/}rc${NC}"
+            echo ""
+            echo "Or just restart your terminal."
+            echo ""
 
-            if $needs_install; then
-                echo "🔧 Reinstalling dependencies..."
-                if ! make install; then
-                    echo "❌ Error: Installation failed"
-                    return 1
-                fi
-                echo ""
-                echo "✅ Amplifier updated and reinstalled successfully"
-            else
-                echo ""
-                echo "✅ Amplifier updated successfully (no reinstall needed)"
-            fi
-
-            echo "   From: ${local_sha:0:7}"
-            echo "   To:   ${remote_sha:0:7}"
             return 0
             ;;
         uninstall)
