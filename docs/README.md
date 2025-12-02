@@ -2,6 +2,18 @@
 
 > A transparent wrapper for Claude Code that automatically manages the [Amplifier](https://github.com/microsoft/amplifier) development environment.
 
+## ✨ What's New (December 2025)
+
+**Complete workspace isolation with git worktrees!** Each project now gets its own isolated environment:
+- 🔒 **Isolated Python environments** - No more dependency conflicts between projects
+- 🌳 **Git worktree-based** - Work on different branches per project independently
+- 📁 **Separate AI working directories** - Each project has its own `ai_working/` and `.data/`
+- 🚀 **New commands**: `amp workspace`, `amp new`, `amp update`, `amp uninstall`
+
+[See full changelog →](changelog.md) | [Migration guide →](migration.md)
+
+---
+
 ## Quick Start
 
 ### One-Time Installation
