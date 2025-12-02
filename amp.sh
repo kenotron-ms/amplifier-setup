@@ -532,6 +532,15 @@ amp() {
                 echo "   ⚠️  Workspace script not found, skipping settings update"
             fi
 
+            # Part 4: Update plugin marketplaces
+            echo ""
+            echo "🔌 Updating plugin marketplaces..."
+            if amp -- plugin marketplace update 2>/dev/null; then
+                echo "   ✅ Plugin marketplaces updated"
+            else
+                echo "   ⚠️  Plugin marketplace update skipped (not in workspace)"
+            fi
+
             # Success message with reload instructions
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
