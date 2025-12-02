@@ -290,25 +290,25 @@ test_configure_marketplace_handles_malformed_json() {
     fi
 }
 
-test_configure_marketplace_enables_gitflow_plugin() {
-    local test_name="Configure marketplace enables git-flow plugin"
+test_configure_marketplace_enables_git_plugin() {
+    local test_name="Configure marketplace enables git plugin"
 
     source "$REPO_DIR/amp-workspace.sh"
 
     # Create test worktree with minimal settings
-    local worktree="$TEST_DIR/gitflow-worktree"
+    local worktree="$TEST_DIR/git-worktree"
     mkdir -p "$worktree/.claude"
     echo '{}' > "$worktree/.claude/settings.local.json"
 
     # Run configuration
     _amp_configure_marketplace "$worktree" > /dev/null 2>&1
 
-    # Verify enabledPlugins was added with git-flow
+    # Verify enabledPlugins was added with git
     if assert_file_contains "$worktree/.claude/settings.local.json" "enabledPlugins"; then
-        if assert_file_contains "$worktree/.claude/settings.local.json" "git-flow@amplifier-setup"; then
+        if assert_file_contains "$worktree/.claude/settings.local.json" "git@amplifier-setup"; then
             pass "$test_name"
         else
-            fail "$test_name" "git-flow@amplifier-setup not found in enabledPlugins"
+            fail "$test_name" "git@amplifier-setup not found in enabledPlugins"
         fi
     else
         fail "$test_name" "enabledPlugins not found in settings"
@@ -338,7 +338,7 @@ main() {
     test_configure_marketplace_idempotent
     test_configure_marketplace_creates_claude_dir
     test_configure_marketplace_handles_malformed_json
-    test_configure_marketplace_enables_gitflow_plugin
+    test_configure_marketplace_enables_git_plugin
 
     # Summary
     echo ""

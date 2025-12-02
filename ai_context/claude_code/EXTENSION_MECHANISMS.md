@@ -361,7 +361,7 @@ my-plugin/
 
    // CORRECT
    "commands": [
-     "./commands/git-pull.md",
+     "./commands/pull.md",
      "./commands/submit-pr.md"
    ]
    ```
@@ -503,8 +503,8 @@ PostToolUse (Edit detected)
 
 **Pattern 3: Plugin → Command → Workflow**
 ```
-Plugin installs /git-flow commands
-  → /git-pull syncs with upstream
+Plugin installs /git commands
+  → /pull syncs with upstream
   → /submit-pr creates PR
 ```
 

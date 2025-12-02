@@ -11,8 +11,8 @@
   },
   "plugins": [
     {
-      "name": "git-flow",
-      "source": "./plugins/git-flow",
+      "name": "git",
+      "source": "./plugins/git",
       "description": "Git workflow helpers for creating PRs and syncing branches with intelligent conflict resolution",
       "version": "1.0.0",
       "author": {
