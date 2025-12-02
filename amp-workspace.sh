@@ -50,9 +50,16 @@ if 'amplifier-setup' not in settings['extraKnownMarketplaces']:
 if 'enabledPlugins' not in settings:
     settings['enabledPlugins'] = {}
 
-# Enable git-flow plugin from amplifier-setup marketplace
-if 'git-flow@amplifier-setup' not in settings['enabledPlugins']:
-    settings['enabledPlugins']['git-flow@amplifier-setup'] = True
+# Migrate from old git-flow plugin to new git plugin
+if 'git-flow@amplifier-setup' in settings['enabledPlugins']:
+    del settings['enabledPlugins']['git-flow@amplifier-setup']
+    settings['enabledPlugins']['git@amplifier-setup'] = True
+    changed = True
+    print("  🔄 Migrated git-flow plugin to git plugin")
+
+# Enable git plugin from amplifier-setup marketplace
+if 'git@amplifier-setup' not in settings['enabledPlugins']:
+    settings['enabledPlugins']['git@amplifier-setup'] = True
     changed = True
 
 if changed:
