@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amplifier - One Command. Complete Control.</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(248, 250, 252, 0.8) 0%, transparent 35%),
+                radial-gradient(circle at 70% 80%, rgba(240, 244, 248, 0.5) 0%, transparent 35%),
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 122, 255, 0.02) 2px, rgba(0, 122, 255, 0.02) 4px),
+                linear-gradient(135deg, #f8fafc 0%, #ffffff 35%, #f5f7fa 70%, #f0f4f8 100%);
+            min-height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 50px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Subtle watermark */
+        body::before {
+            content: 'amp';
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 200px;
+            font-weight: 900;
+            color: rgba(0, 122, 255, 0.015);
+            z-index: 0;
+            pointer-events: none;
+            letter-spacing: -0.05em;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1600px;
+            height: calc(100vh - 100px);
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .box {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 122, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease-out forwards;
+            overflow: hidden;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.02);
+            border-color: rgba(0, 122, 255, 0.15);
+        }
+
+        /* Grid positioning - Perfect 6×4 layout */
+        .hero-terminal {
+            grid-column: 1 / 4;  /* Cols 1-3 (narrower) */
+            grid-row: 1 / 4;     /* Rows 1-3 */
+            animation-delay: 0s;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        /* Top-right: 2 commands stacked (Col 4-6, Rows 1-2) */
+        .box:nth-child(2) { /* amp new */
+            grid-column: 4 / 5;
+            grid-row: 1 / 2;
+        }
+
+        .box:nth-child(3) { /* amp */
+            grid-column: 5 / 6;
+            grid-row: 1 / 2;
+        }
+
+        /* First tall value prop (Col 4-6, Rows 2-3) */
+        .box:nth-child(4) { /* Isolated Environments */
+            grid-column: 4 / 7;
+            grid-row: 2 / 4;
+        }
+
+        /* Row 4: 5 commands + 1 value prop */
+        .box:nth-child(5) { /* amp update */
+            grid-column: 1 / 2;
+            grid-row: 4 / 5;
+        }
+
+        .box:nth-child(6) { /* amp workspace */
+            grid-column: 2 / 3;
+            grid-row: 4 / 5;
+        }
+
+        .box:nth-child(7) { /* Smart Updates - make it 2-wide instead of tall */
+            grid-column: 3 / 5;
+            grid-row: 4 / 5;
+        }
+
+        .box:nth-child(8) { /* amp uninstall */
+            grid-column: 5 / 6;
+            grid-row: 4 / 5;
+        }
+
+        .box:nth-child(9) { /* Zero Configuration */
+            grid-column: 6 / 7;
+            grid-row: 4 / 5;
+        }
+
+        .box:nth-child(10) { /* Removed - amp manage doesn't exist */
+            display: none;
+        }
+
+        /* Default sizing for classes (as fallback) */
+        .command {
+            grid-column: span 1;
+            grid-row: span 1;
+        }
+
+        .value-prop {
+            grid-column: span 2;
+            grid-row: span 1;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%);
+            box-shadow:
+                0 1px 3px rgba(0, 0, 0, 0.08),
+                0 4px 12px rgba(0, 122, 255, 0.08);
+            border: 1px solid rgba(0, 122, 255, 0.12);
+        }
+
+        .value-prop-tall {
+            grid-column: span 2;
+            grid-row: span 2;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%);
+            box-shadow:
+                0 1px 3px rgba(0, 0, 0, 0.08),
+                0 4px 12px rgba(0, 122, 255, 0.08);
+            border: 1px solid rgba(0, 122, 255, 0.12);
+        }
+
+        /* Stagger animations */
+        .box:nth-child(1) { animation-delay: 0s; }
+        .box:nth-child(2) { animation-delay: 0.1s; }
+        .box:nth-child(3) { animation-delay: 0.15s; }
+        .box:nth-child(4) { animation-delay: 0.2s; }
+        .box:nth-child(5) { animation-delay: 0.25s; }
+        .box:nth-child(6) { animation-delay: 0.3s; }
+        .box:nth-child(7) { animation-delay: 0.35s; }
+        .box:nth-child(8) { animation-delay: 0.4s; }
+        .box:nth-child(9) { animation-delay: 0.45s; }
+        .box:nth-child(10) { animation-delay: 0.5s; }
+
+        /* Typography - Consistent command styling */
+        .command-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #007AFF;
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            line-height: 1;
+        }
+
+        .command-subtitle {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.01em;
+        }
+
+        .command-code {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 10px;
+            color: #4AF626;
+            background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-top: 6px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .value-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1d1d1f;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+
+        .value-description {
+            font-size: 14px;
+            font-weight: 400;
+            color: #6e6e73;
+            line-height: 1.5;
+        }
+
+        .icon {
+            width: 36px;
+            height: 36px;
+            margin-bottom: 12px;
+            color: #007AFF;
+            flex-shrink: 0;
+        }
+
+        /* Terminal styles */
+        .terminal-header {
+            background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #FF5F57; }
+        .dot-yellow { background: #FFBD2E; }
+        .dot-green { background: #28CA42; }
+
+        .terminal-title {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 13px;
+            color: #6e6e73;
+            text-align: center;
+            flex: 1;
+        }
+
+        .terminal-content {
+            background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+            color: #4AF626;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.35;
+            padding: 18px;
+            height: calc(100% - 42px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .terminal-section {
+            margin-bottom: 16px;
+        }
+
+        .terminal-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #007AFF;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .terminal-comment {
+            color: #6e6e73;
+        }
+
+        .terminal-prompt {
+            color: #5AC8FA;
+        }
+
+        .terminal-command {
+            color: #4AF626;
+        }
+
+        .terminal-path {
+            color: #FFD60A;
+        }
+
+        .terminal-line {
+            margin-bottom: 3px;
+        }
+
+        .metric {
+            font-size: 52px;
+            font-weight: 800;
+            color: #30D158;
+            text-align: center;
+            margin: 20px 0;
+            text-shadow: 0 0 30px rgba(48, 209, 88, 0.4);
+            letter-spacing: -0.03em;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #6e6e73;
+            text-align: center;
+        }
+
+        .terminal-code-block {
+            background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .terminal-code-block .line {
+            color: #4AF626;
+        }
+
+        .terminal-code-block .comment {
+            color: #6e6e73;
+        }
+
+        .terminal-code-block .dir {
+            color: #FFD60A;
+        }
+
+        .terminal-code-block .tree {
+            color: #5AC8FA;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            body {
+                padding: 30px;
+            }
+
+            .hero-terminal {
+                grid-column: span 6;
+                grid-row: span 2;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+            }
+
+            .hero-terminal {
+                grid-column: span 4;
+            }
+
+            .command {
+                grid-column: span 2;
+            }
+
+            .value-prop, .value-prop-tall {
+                grid-column: span 4;
+                grid-row: span 1;
+            }
+        }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- HERO: Terminal Example (BEFORE/AFTER) -->
+        <div class="box hero-terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <div class="terminal-dot dot-red"></div>
+                    <div class="terminal-dot dot-yellow"></div>
+                    <div class="terminal-dot dot-green"></div>
+                </div>
+                <div class="terminal-title">Terminal</div>
+                <div style="width: 52px;"></div>
+            </div>
+            <div class="terminal-content">
+                <div class="terminal-section">
+                    <div class="section-label">Before: Manual Setup</div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command"> git clone https://github.com/microsoft/amplifier</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command"> cd amplifier</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command"> make install</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command"> source .venv/bin/activate</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command"> cd ~/my-project</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command"> claude --add-dir ~/amplifier "implement feature"</span>
+                    </div>
+                </div>
+
+                <div class="metric">6 steps → 1 command</div>
+
+                <div class="terminal-section">
+                    <div class="section-label">After: Automated</div>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command"> amp</span>
+                    </div>
+                    <div class="terminal-line" style="margin-top: 10px; color: #5AC8FA;">
+                        <span class="terminal-comment">✓ Environment ready</span>
+                    </div>
+                    <div class="terminal-line" style="color: #5AC8FA;">
+                        <span class="terminal-comment">✓ Context loaded</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Command: amp new -->
+        <div class="box command">
+            <!-- Lucide File Plus icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                <path d="M9 15h6"/>
+                <path d="M12 18v-6"/>
+            </svg>
+            <div class="command-title">amp new</div>
+            <div class="command-subtitle">Create</div>
+            <div class="command-code">$ amp new my-app</div>
+        </div>
+
+        <!-- Command: amp -->
+        <div class="box command">
+            <!-- Lucide Terminal icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 17 10 11 4 5"/>
+                <line x1="12" x2="20" y1="19" y2="19"/>
+            </svg>
+            <div class="command-title">amp</div>
+            <div class="command-subtitle">Just Work</div>
+            <div class="command-code">$ cd ~/project && amp</div>
+        </div>
+
+        <!-- Value Prop: Isolated Environments -->
+        <div class="box value-prop-tall">
+            <!-- Lucide Layout Grid icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="7" height="7" x="3" y="3" rx="1" />
+                <rect width="7" height="7" x="14" y="3" rx="1" />
+                <rect width="7" height="7" x="14" y="14" rx="1" />
+                <rect width="7" height="7" x="3" y="14" rx="1" />
+            </svg>
+            <div class="value-title">Isolated Environments</div>
+            <div class="value-description">Each project gets its own Python environment, git branch, and AI files.</div>
+
+            <!-- Simplified conceptual visual -->
+            <div style="display: flex; gap: 16px; margin-top: 20px; justify-content: center;">
+                <div style="background: rgba(0, 122, 255, 0.1); border: 2px solid #007AFF; border-radius: 12px; padding: 20px 24px; text-align: center; flex: 1;">
+                    <div style="font-family: 'SF Mono', monospace; font-size: 13px; color: #007AFF; font-weight: 600; margin-bottom: 8px;">project-a</div>
+                    <div style="font-size: 11px; color: #86868b; font-weight: 500;">Independent</div>
+                </div>
+                <div style="background: rgba(0, 122, 255, 0.1); border: 2px solid #007AFF; border-radius: 12px; padding: 20px 24px; text-align: center; flex: 1;">
+                    <div style="font-family: 'SF Mono', monospace; font-size: 13px; color: #007AFF; font-weight: 600; margin-bottom: 8px;">project-b</div>
+                    <div style="font-size: 11px; color: #86868b; font-weight: 500;">Independent</div>
+                </div>
+                <div style="background: rgba(0, 122, 255, 0.1); border: 2px solid #007AFF; border-radius: 12px; padding: 20px 24px; text-align: center; flex: 1;">
+                    <div style="font-family: 'SF Mono', monospace; font-size: 13px; color: #007AFF; font-weight: 600; margin-bottom: 8px;">project-c</div>
+                    <div style="font-size: 11px; color: #86868b; font-weight: 500;">Independent</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Command: amp update -->
+        <div class="box command">
+            <!-- Lucide Refresh CW icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                <path d="M8 16H3v5"/>
+            </svg>
+            <div class="command-title">amp update</div>
+            <div class="command-subtitle">Update</div>
+            <div class="command-code">$ amp update</div>
+        </div>
+
+        <!-- Command: amp workspace -->
+        <div class="box command">
+            <!-- Lucide Folder Tree icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/>
+                <path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/>
+                <path d="M3 5a2 2 0 0 0 2 2h3"/>
+                <path d="M3 3v13a2 2 0 0 0 2 2h3"/>
+            </svg>
+            <div class="command-title">amp workspace</div>
+            <div class="command-subtitle">Manage</div>
+            <div class="command-code">$ amp workspace list</div>
+        </div>
+
+        <!-- Value Prop: Smart Updates -->
+        <div class="box value-prop">
+            <!-- Lucide Zap icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
+            </svg>
+            <div class="value-title">Smart Updates</div>
+            <div class="value-description">Only reinstalls when dependencies change. Most updates complete in seconds.</div>
+
+            <!-- Simplified donut chart (no legend) -->
+            <div id="updates-viz" style="width: 100%; height: 140px; margin-top: 20px;"></div>
+        </div>
+
+        <!-- Command: amp uninstall -->
+        <div class="box command">
+            <!-- Lucide Trash 2 icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                <line x1="10" x2="10" y1="11" y2="17"/>
+                <line x1="14" x2="14" y1="11" y2="17"/>
+            </svg>
+            <div class="command-title">amp uninstall</div>
+            <div class="command-subtitle">Clean Exit</div>
+            <div class="command-code">$ amp uninstall --data</div>
+        </div>
+
+        <!-- Value Prop: Zero Configuration -->
+        <div class="box value-prop">
+            <!-- Lucide Settings icon -->
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <div class="value-title">Zero Configuration</div>
+            <div class="value-description">No manual venv activation. No workspace juggling. Just type amp and start working.</div>
+        </div>
+    </div>
+
+    <script>
+        // ===== DONUT CHART VISUALIZATION (SIMPLIFIED) =====
+        (function() {
+            const container = d3.select("#updates-viz");
+            const width = 200;
+            const height = 140;
+
+            const svg = container.append("svg")
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .attr("width", "100%")
+                .attr("height", "100%");
+
+            // Gradients
+            const defs = svg.append("defs");
+
+            const greenGrad = defs.append("linearGradient")
+                .attr("id", "greenGradD3")
+                .attr("x1", "0%").attr("y1", "0%")
+                .attr("x2", "100%").attr("y2", "100%");
+            greenGrad.append("stop").attr("offset", "0%").attr("style", "stop-color:#30D158;stop-opacity:1");
+            greenGrad.append("stop").attr("offset", "100%").attr("style", "stop-color:#30D158;stop-opacity:0.8");
+
+            const blueGrad = defs.append("linearGradient")
+                .attr("id", "blueGradD3")
+                .attr("x1", "0%").attr("y1", "0%")
+                .attr("x2", "100%").attr("y2", "100%");
+            blueGrad.append("stop").attr("offset", "0%").attr("style", "stop-color:#007AFF;stop-opacity:1");
+            blueGrad.append("stop").attr("offset", "100%").attr("style", "stop-color:#0051D5;stop-opacity:1");
+
+            const data = [
+                { label: "Skip rebuild", value: 86, color: "url(#greenGradD3)" },
+                { label: "Reinstall", value: 14, color: "url(#blueGradD3)" }
+            ];
+
+            const pie = d3.pie()
+                .value(d => d.value)
+                .sort(null)
+                .startAngle(-Math.PI / 2)
+                .endAngle(Math.PI * 1.5);
+
+            const arc = d3.arc()
+                .innerRadius(40)
+                .outerRadius(65);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+            // Draw arcs with animation
+            const arcs = g.selectAll(".arc")
+                .data(pie(data))
+                .join("path")
+                .attr("class", "arc")
+                .attr("fill", d => d.data.color)
+                .attr("stroke", "none")
+                .each(function(d) { this._current = { startAngle: d.startAngle, endAngle: d.startAngle }; });
+
+            arcs.transition()
+                .delay((d, i) => i * 400)
+                .duration(1000)
+                .ease(d3.easeCubicOut)
+                .attrTween("d", function(d) {
+                    const interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(1);
+                    return t => arc(interpolate(t));
+                });
+
+            // Center text - EVEN LARGER percentage
+            g.append("text")
+                .attr("text-anchor", "middle")
+                .attr("y", -8)
+                .attr("font-family", "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif")
+                .attr("font-size", 60)
+                .attr("font-weight", 800)
+                .attr("fill", "#1d1d1f")
+                .attr("letter-spacing", "-0.03em")
+                .style("opacity", 0)
+                .text("86%")
+                .transition()
+                .delay(800)
+                .duration(400)
+                .style("opacity", 1);
+
+            g.append("text")
+                .attr("text-anchor", "middle")
+                .attr("y", 22)
+                .attr("font-family", "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif")
+                .attr("font-size", 16)
+                .attr("font-weight", 600)
+                .attr("fill", "#30D158")
+                .style("opacity", 0)
+                .text("skip rebuild")
+                .transition()
+                .delay(1000)
+                .duration(400)
+                .style("opacity", 1);
+        })();
+    </script>
+</body>
+</html>

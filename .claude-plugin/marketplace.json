@@ -1,0 +1,22 @@
+{
+  "name": "amplifier-setup",
+  "owner": {
+    "name": "kenotron-ms",
+    "url": "https://github.com/kenotron-ms/amplifier-setup"
+  },
+  "metadata": {
+    "description": "Amplifier setup and customization plugins - extends the core amplifier functionality",
+    "version": "1.0.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "git-flow",
+      "source": "./plugins/git-flow",
+      "description": "Git workflow helpers for creating PRs and syncing branches with intelligent conflict resolution",
+      "version": "1.0.0",
+      "author": "kenotron-ms",
+      "keywords": ["git", "pr", "pull-request", "merge", "conflict-resolution"]
+    }
+  ]
+}

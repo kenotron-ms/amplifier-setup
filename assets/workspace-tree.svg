@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" fill="none">
+  <style>
+    .tree-line { stroke: #8e8e93; stroke-width: 1.5; }
+    .folder { fill: #007AFF; }
+    .venv { fill: #4AF626; }
+    .ai { fill: #FFD60A; }
+    .data { fill: #FF9F0A; }
+    text { font-family: 'SF Mono', Monaco, monospace; font-size: 12px; fill: #1d1d1f; }
+  </style>
+
+  <!-- Tree lines -->
+  <line x1="10" y1="20" x2="10" y2="180" class="tree-line"/>
+  <line x1="10" y1="50" x2="30" y2="50" class="tree-line"/>
+  <line x1="10" y1="130" x2="30" y2="130" class="tree-line"/>
+
+  <line x1="30" y1="70" x2="30" y2="110" class="tree-line"/>
+  <line x1="30" y1="70" x2="50" y2="70" class="tree-line"/>
+  <line x1="30" y1="85" x2="50" y2="85" class="tree-line"/>
+  <line x1="30" y1="100" x2="50" y2="100" class="tree-line"/>
+
+  <line x1="30" y1="150" x2="30" y2="190" class="tree-line"/>
+  <line x1="30" y1="150" x2="50" y2="150" class="tree-line"/>
+  <line x1="30" y1="165" x2="50" y2="165" class="tree-line"/>
+  <line x1="30" y1="180" x2="50" y2="180" class="tree-line"/>
+
+  <!-- Root -->
+  <text x="15" y="25">~/.amp/w/</text>
+
+  <!-- project-a -->
+  <circle cx="35" cy="48" r="4" class="folder"/>
+  <text x="55" y="54">project-a/</text>
+  <circle cx="55" cy="68" r="3" class="venv"/>
+  <text x="75" y="74">.venv/</text>
+  <circle cx="55" cy="83" r="3" class="ai"/>
+  <text x="75" y="89">ai_working/</text>
+  <circle cx="55" cy="98" r="3" class="data"/>
+  <text x="75" y="104">.data/</text>
+
+  <!-- project-b -->
+  <circle cx="35" cy="128" r="4" class="folder"/>
+  <text x="55" y="134">project-b/</text>
+  <circle cx="55" cy="148" r="3" class="venv"/>
+  <text x="75" y="154">.venv/</text>
+  <circle cx="55" cy="163" r="3" class="ai"/>
+  <text x="75" y="169">ai_working/</text>
+  <circle cx="55" cy="178" r="3" class="data"/>
+  <text x="75" y="184">.data/</text>
+</svg>
