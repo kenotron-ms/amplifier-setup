@@ -535,10 +535,16 @@ amp() {
             # Part 4: Update plugin marketplaces
             echo ""
             echo "🔌 Updating plugin marketplaces..."
-            if amp -- plugin marketplace update 2>/dev/null; then
-                echo "   ✅ Plugin marketplaces updated"
+            if [[ -d "$worktree_path" ]] && command -v claude &> /dev/null; then
+                pushd "$worktree_path" > /dev/null 2>&1
+                if claude plugin marketplace update 2>/dev/null; then
+                    echo "   ✅ Plugin marketplaces updated"
+                else
+                    echo "   ⚠️  Plugin marketplace update failed"
+                fi
+                popd > /dev/null 2>&1
             else
-                echo "   ⚠️  Plugin marketplace update skipped (not in workspace)"
+                echo "   ⚠️  Plugin marketplace update skipped (no workspace or claude not found)"
             fi
 
             # Success message with reload instructions
