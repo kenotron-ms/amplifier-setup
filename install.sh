@@ -33,7 +33,10 @@ echo ""
 # Configuration
 AMP_HOME="${AMP_HOME:-$HOME/.amp}"
 AMP_SCRIPT="$AMP_HOME/amp.sh"
-DOWNLOAD_URL="https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp.sh"
+BASE_URL="https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main"
+
+# List of all scripts to install/update
+SCRIPTS=("amp.sh" "amp-workspace.sh" "install.sh" "uninstall.sh")
 
 # Clean up old script versions if they exist
 if [[ -f "$AMP_SCRIPT" ]]; then
@@ -57,43 +60,48 @@ LOCAL_WORKSPACE_SCRIPT="$SCRIPT_DIR/amp-workspace.sh"
 if [[ -f "$LOCAL_AMP_SCRIPT" ]]; then
     # Use local copy (development mode)
     echo "📦 Using local scripts from repository..."
-    cp -f "$LOCAL_AMP_SCRIPT" "$AMP_SCRIPT"
-    if [[ -f "$LOCAL_WORKSPACE_SCRIPT" ]]; then
-        cp -f "$LOCAL_WORKSPACE_SCRIPT" "$AMP_HOME/amp-workspace.sh"
-    fi
-    chmod +x "$AMP_SCRIPT" "$AMP_HOME/amp-workspace.sh"
+    for script in "${SCRIPTS[@]}"; do
+        local_script="$SCRIPT_DIR/$script"
+        if [[ -f "$local_script" ]]; then
+            cp -f "$local_script" "$AMP_HOME/$script"
+            chmod +x "$AMP_HOME/$script"
+        fi
+    done
     echo "✅ Installed local scripts"
 else
     # Always download latest from GitHub (idempotent updates)
     echo "📥 Downloading latest scripts from GitHub..."
 
     if command -v curl &> /dev/null; then
-        # Download amp.sh
-        if ! curl -fsSL "$DOWNLOAD_URL" -o "$AMP_SCRIPT.tmp"; then
-            echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
-            echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
-            exit 1
-        fi
-        mv -f "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
-
-        # Download amp-workspace.sh
-        if curl -fsSL "https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp-workspace.sh" -o "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
-            mv -f "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
-        fi
+        for script in "${SCRIPTS[@]}"; do
+            if ! curl -fsSL "$BASE_URL/$script" -o "$AMP_HOME/$script.tmp" 2>/dev/null; then
+                # amp.sh is required, others are optional
+                if [[ "$script" == "amp.sh" ]]; then
+                    echo -e "${RED}❌ Failed to download $script${NC}" >&2
+                    echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
+                    exit 1
+                fi
+                continue
+            fi
+            mv -f "$AMP_HOME/$script.tmp" "$AMP_HOME/$script"
+            chmod +x "$AMP_HOME/$script"
+        done
 
     elif command -v wget &> /dev/null; then
-        # Download amp.sh
-        if ! wget -q "$DOWNLOAD_URL" -O "$AMP_SCRIPT.tmp"; then
-            echo -e "${RED}❌ Failed to download amp.sh${NC}" >&2
-            echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
-            exit 1
-        fi
-        mv -f "$AMP_SCRIPT.tmp" "$AMP_SCRIPT"
-
-        # Download amp-workspace.sh
-        if wget -q "https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/amp-workspace.sh" -O "$AMP_HOME/amp-workspace.sh.tmp" 2>/dev/null; then
-            mv -f "$AMP_HOME/amp-workspace.sh.tmp" "$AMP_HOME/amp-workspace.sh"
-        fi
+        for script in "${SCRIPTS[@]}"; do
+            if ! wget -q "$BASE_URL/$script" -O "$AMP_HOME/$script.tmp" 2>/dev/null; then
+                # amp.sh is required, others are optional
+                if [[ "$script" == "amp.sh" ]]; then
+                    echo -e "${RED}❌ Failed to download $script${NC}" >&2
+                    echo -e "${YELLOW}💡 Check your internet connection and try again${NC}" >&2
+                    exit 1
+                fi
+                rm -f "$AMP_HOME/$script.tmp"
+                continue
+            fi
+            mv -f "$AMP_HOME/$script.tmp" "$AMP_HOME/$script"
+            chmod +x "$AMP_HOME/$script"
+        done
 
     else
         echo -e "${RED}❌ Neither curl nor wget found${NC}" >&2
@@ -101,7 +109,6 @@ else
         exit 1
     fi
 
-    chmod +x "$AMP_SCRIPT" "$AMP_HOME/amp-workspace.sh"
     echo "✅ Downloaded latest scripts"
 fi
 

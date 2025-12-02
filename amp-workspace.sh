@@ -4,25 +4,21 @@
 # Each workspace in ~/.amp/w/<workspace-name>/ is a full amplifier git worktree
 # This allows isolated ai_working/, .data/, and .venv per project
 
-# Configure the amplifier-setup marketplace in worktree settings
+# Configure the amplifier-setup marketplace in worktree settings.local.json
+# Uses settings.local.json to avoid modifying the amplifier repo's committed settings
 _amp_configure_marketplace() {
     local worktree_path="$1"
-    local settings_file="$worktree_path/.claude/settings.json"
+    local settings_file="$worktree_path/.claude/settings.local.json"
 
     # Ensure .claude directory exists
     mkdir -p "$worktree_path/.claude"
 
-    # If settings.json doesn't exist, create minimal one
+    # If settings.local.json doesn't exist, create minimal one
     if [[ ! -f "$settings_file" ]]; then
         echo '{}' > "$settings_file"
     fi
 
-    # Check if extraKnownMarketplaces already configured
-    if grep -q "extraKnownMarketplaces" "$settings_file" 2>/dev/null; then
-        return 0  # Already configured
-    fi
-
-    # Add extraKnownMarketplaces using python for reliable JSON manipulation
+    # Add/update marketplace and plugins using python for reliable JSON manipulation
     if command -v python3 &>/dev/null; then
         python3 << EOF
 import json
@@ -35,20 +31,37 @@ try:
 except (json.JSONDecodeError, FileNotFoundError):
     settings = {}
 
+changed = False
+
 # Add extraKnownMarketplaces if not present
 if 'extraKnownMarketplaces' not in settings:
-    settings['extraKnownMarketplaces'] = {
-        "amplifier-setup": {
-            "source": {
-                "source": "github",
-                "repo": "kenotron-ms/amplifier-setup"
-            }
+    settings['extraKnownMarketplaces'] = {}
+
+if 'amplifier-setup' not in settings['extraKnownMarketplaces']:
+    settings['extraKnownMarketplaces']['amplifier-setup'] = {
+        "source": {
+            "source": "github",
+            "repo": "kenotron-ms/amplifier-setup"
         }
     }
+    changed = True
+
+# Add enabledPlugins if not present
+if 'enabledPlugins' not in settings:
+    settings['enabledPlugins'] = {}
+
+# Enable git-flow plugin from amplifier-setup marketplace
+if 'git-flow@amplifier-setup' not in settings['enabledPlugins']:
+    settings['enabledPlugins']['git-flow@amplifier-setup'] = True
+    changed = True
+
+if changed:
     with open(settings_file, 'w') as f:
         json.dump(settings, f, indent=2)
         f.write('\n')
-    print("  ✅ Configured amplifier-setup marketplace")
+    print("  ✅ Configured amplifier-setup marketplace and plugins")
+else:
+    print("  ✅ Marketplace and plugins already configured")
 EOF
     else
         echo "  ⚠️  Python not found, skipping marketplace configuration" >&2
@@ -362,7 +375,7 @@ _amp_prune_workspaces() {
 # Command dispatcher for workspace subcommands
 amp_workspace() {
     local subcommand="${1:-list}"
-    shift || true
+    [[ $# -gt 0 ]] && shift
 
     case "$subcommand" in
         list)

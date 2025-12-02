@@ -399,13 +399,14 @@ amp() {
         workspace)
             shift
             # Source workspace functions
-            local workspace_script="$(dirname "${BASH_SOURCE[0]}")/amp-workspace.sh"
+            local workspace_script="$AMP_HOME/amp-workspace.sh"
             if [[ -f "$workspace_script" ]]; then
                 # shellcheck disable=SC1090
                 source "$workspace_script"
                 amp_workspace "$@"
             else
-                echo "❌ Error: amp-workspace.sh not found"
+                echo "❌ Error: amp-workspace.sh not found at $workspace_script"
+                echo "💡 Try reinstalling: curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash"
                 return 1
             fi
             return
@@ -414,6 +415,10 @@ amp() {
             # Update both amplifier and amp scripts
             echo "🔄 Updating amp..."
             echo ""
+
+            # Save original directory to return to after update
+            local original_dir
+            original_dir="$(pwd)"
 
             # Part 1: Update amplifier repository
             echo "📦 Updating amplifier repository..."
@@ -425,10 +430,11 @@ amp() {
                 return 1
             fi
 
-            cd "$AMP_AMPLIFIER_DIR" || return 1
+            pushd "$AMP_AMPLIFIER_DIR" > /dev/null || return 1
 
             if ! git fetch origin main --quiet 2>&1; then
                 echo "❌ Error: Failed to fetch updates"
+                popd > /dev/null
                 return 1
             fi
 
@@ -449,6 +455,7 @@ amp() {
 
                 if ! git pull origin main --quiet; then
                     echo "❌ Error: Failed to pull updates"
+                    popd > /dev/null
                     return 1
                 fi
 
@@ -456,6 +463,7 @@ amp() {
                     echo "   • Installing dependencies..."
                     if ! make install >> "$AMP_LOG" 2>&1; then
                         echo "❌ Error: Installation failed"
+                        popd > /dev/null
                         return 1
                     fi
                 fi
@@ -464,6 +472,8 @@ amp() {
             else
                 echo "   ✅ Amplifier already up to date"
             fi
+
+            popd > /dev/null
 
             # Part 2: Update amp scripts
             echo ""
