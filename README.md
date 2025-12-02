@@ -9,6 +9,7 @@
 - 🌳 **Git worktree-based** - Work on different branches per project independently
 - 📁 **Separate AI working directories** - Each project has its own `ai_working/` and `.data/`
 - 🚀 **New commands**: `amp workspace`, `amp new`, `amp update`, `amp uninstall`
+- 🔌 **Claude Code plugins** - Git workflow helpers (`/pull`, `/submit-pr`) with more coming
 
 [See full changelog →](CHANGELOG.md)
 
@@ -367,6 +368,7 @@ amp uninstall --help
 ## Documentation
 
 - **[Quick Reference](QUICK_REFERENCE.md)** - Essential commands and workflows
+- **[Plugins](docs/plugins.md)** - Claude Code plugins and extensions
 - **[Migration Guide](MIGRATION.md)** - Upgrading from pre-worktree versions
 - **[Changelog](CHANGELOG.md)** - Complete history of changes
 - **[Amplifier Docs](https://github.com/microsoft/amplifier)** - Amplifier development environment

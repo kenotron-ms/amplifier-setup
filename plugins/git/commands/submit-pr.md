@@ -2,6 +2,25 @@
 
 Submit a pull request from the current branch with proper commit hygiene.
 
+## Important: Project Directory
+
+**All git commands must run in the actual project directory, not the Claude worktree.**
+
+The commands will use `PROJECT_DIR` environment variable if set, otherwise fall back to the current directory (`$PWD`).
+
+**At the start of this command, set PROJECT_DIR:**
+```bash
+# Use PROJECT_DIR if set, otherwise use current directory
+PROJECT_DIR="${PROJECT_DIR:-$PWD}"
+echo "Working in: $PROJECT_DIR"
+```
+
+**Then for all git commands, use:**
+```bash
+cd "$PROJECT_DIR"
+git <command>
+```
+
 ## Workflow
 
 Follow these steps in order:
@@ -10,6 +29,7 @@ Follow these steps in order:
 
 Run these commands to understand the current state:
 ```bash
+cd "$PROJECT_DIR"
 git status
 git branch --show-current
 git remote -v
@@ -26,6 +46,7 @@ If there are uncommitted changes:
 
 1. Show the user what will be committed:
    ```bash
+   cd "$PROJECT_DIR"
    git diff --stat
    git diff --staged --stat
    ```
@@ -46,6 +67,7 @@ If there are uncommitted changes:
 
 1. Check if the branch exists on remote:
    ```bash
+   cd "$PROJECT_DIR"
    git ls-remote --heads origin $(git branch --show-current)
    ```
 
@@ -58,6 +80,7 @@ If there are uncommitted changes:
 
 1. Check if a PR already exists for this branch:
    ```bash
+   cd "$PROJECT_DIR"
    gh pr view --json number,url 2>/dev/null || echo "No existing PR"
    ```
 
@@ -83,7 +106,8 @@ Show the user:
 
 - If `gh` CLI is not installed, inform user and provide installation instructions
 - If not authenticated with GitHub, guide user through `gh auth login`
-- If push fails due to conflicts, suggest running `/git-pull` first
+- If push fails due to conflicts, suggest running `/pull` first
+- If PROJECT_DIR is not set, inform user and use current directory as fallback
 
 ## Important Notes
 

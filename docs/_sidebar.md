@@ -10,6 +10,9 @@
   - [amp update](commands/update.md)
   - [amp uninstall](commands/uninstall.md)
 
+- Plugins & Extensions
+  - [Claude Code Plugins](plugins.md)
+
 - Advanced
   - [How It Works](how-it-works.md)
   - [Troubleshooting](troubleshooting.md)
