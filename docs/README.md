@@ -9,6 +9,7 @@
 - 🌳 **Git worktree-based** - Work on different branches per project independently
 - 📁 **Separate AI working directories** - Each project has its own `ai_working/` and `.data/`
 - 🚀 **New commands**: `amp workspace`, `amp new`, `amp update`, `amp uninstall`
+- 🔌 **Claude Code plugins** - Git workflow helpers (`/pull`, `/submit-pr`) with more coming
 
 [See full changelog →](changelog.md) | [Migration guide →](migration.md)
 
