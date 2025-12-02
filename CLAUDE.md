@@ -46,5 +46,19 @@ amplifier-setup/
 ├── .claude-plugin/     # Plugin marketplace manifest
 │   └── marketplace.json
 ├── plugins/            # Custom plugins (agents, commands, hooks)
+├── ai_context/         # AI context and documentation
+│   └── claude_code/    # Claude Code specific docs
 └── docs/               # Documentation
 ```
+
+## Claude Code Extension Reference
+
+For comprehensive documentation on creating and configuring Claude Code extensions, see:
+
+- **@ai_context/claude_code/EXTENSION_MECHANISMS.md** - Complete reference for:
+  - Slash commands (frontmatter fields, structure)
+  - Subagents and skills
+  - Hooks (all types, configuration)
+  - Plugins (plugin.json schema)
+  - Marketplaces (marketplace.json schema)
+  - Common validation errors and fixes

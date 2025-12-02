@@ -2,6 +2,11 @@
   "name": "git-flow",
   "version": "1.0.0",
   "description": "Git workflow helpers for creating PRs and syncing branches with intelligent conflict resolution",
-  "author": "kenotron-ms",
-  "commands": "../commands"
+  "author": {
+    "name": "kenotron-ms"
+  },
+  "commands": [
+    "./commands/git-pull.md",
+    "./commands/submit-pr.md"
+  ]
 }
