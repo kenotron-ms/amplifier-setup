@@ -4,6 +4,57 @@
 # Each workspace in ~/.amp/w/<workspace-name>/ is a full amplifier git worktree
 # This allows isolated ai_working/, .data/, and .venv per project
 
+# Configure the amplifier-setup marketplace in worktree settings
+_amp_configure_marketplace() {
+    local worktree_path="$1"
+    local settings_file="$worktree_path/.claude/settings.json"
+
+    # Ensure .claude directory exists
+    mkdir -p "$worktree_path/.claude"
+
+    # If settings.json doesn't exist, create minimal one
+    if [[ ! -f "$settings_file" ]]; then
+        echo '{}' > "$settings_file"
+    fi
+
+    # Check if extraKnownMarketplaces already configured
+    if grep -q "extraKnownMarketplaces" "$settings_file" 2>/dev/null; then
+        return 0  # Already configured
+    fi
+
+    # Add extraKnownMarketplaces using python for reliable JSON manipulation
+    if command -v python3 &>/dev/null; then
+        python3 << EOF
+import json
+import sys
+
+settings_file = "$settings_file"
+try:
+    with open(settings_file, 'r') as f:
+        settings = json.load(f)
+except (json.JSONDecodeError, FileNotFoundError):
+    settings = {}
+
+# Add extraKnownMarketplaces if not present
+if 'extraKnownMarketplaces' not in settings:
+    settings['extraKnownMarketplaces'] = {
+        "amplifier-setup": {
+            "source": {
+                "source": "github",
+                "repo": "kenotron-ms/amplifier-setup"
+            }
+        }
+    }
+    with open(settings_file, 'w') as f:
+        json.dump(settings, f, indent=2)
+        f.write('\n')
+    print("  ✅ Configured amplifier-setup marketplace")
+EOF
+    else
+        echo "  ⚠️  Python not found, skipping marketplace configuration" >&2
+    fi
+}
+
 # Convert path to safe directory name
 # /home/user/projects/foo -> home-user-projects-foo
 # /Users/ken/workspace/foo -> Users-ken-workspace-foo
@@ -78,6 +129,10 @@ _amp_get_or_create_worktree() {
     }
 
     echo "✅ Worktree created on branch: workspace/$workspace_name" >&2
+
+    # Configure marketplace in worktree settings
+    echo "🔧 Configuring marketplace..." >&2
+    _amp_configure_marketplace "$worktree_path"
 
     # Set up virtual environment for this worktree (in subshell)
     echo "🔧 Setting up virtual environment..." >&2

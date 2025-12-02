@@ -495,6 +495,33 @@ amp() {
                 echo "   Your current scripts continue working"
             fi
 
+            # Part 3: Update current workspace settings (if in a project directory)
+            echo ""
+            echo "🔧 Updating workspace settings..."
+
+            # Source workspace functions for _amp_configure_marketplace
+            local workspace_script="$AMP_HOME/amp-workspace.sh"
+            if [[ -f "$workspace_script" ]]; then
+                # shellcheck disable=SC1090
+                source "$workspace_script"
+
+                # Get workspace for current directory (if exists)
+                local current_dir
+                current_dir="$(pwd)"
+                local workspace_name
+                workspace_name="$(_amp_workspace_name "$current_dir")"
+                local worktree_path="$AMP_HOME/w/$workspace_name"
+
+                if [[ -d "$worktree_path" ]] && [[ -f "$worktree_path/.git" ]]; then
+                    _amp_configure_marketplace "$worktree_path"
+                else
+                    echo "   ℹ️  No workspace for current directory yet"
+                    echo "   Run 'amp' to create one"
+                fi
+            else
+                echo "   ⚠️  Workspace script not found, skipping settings update"
+            fi
+
             # Success message with reload instructions
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
