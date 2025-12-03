@@ -1,0 +1,220 @@
+name: Test Cross-Platform Installation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'install.sh'
+      - 'install.ps1'
+      - 'amp.sh'
+      - 'amp.ps1'
+      - 'amp.cmd'
+      - '.github/workflows/test-install.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'install.sh'
+      - 'install.ps1'
+      - 'amp.sh'
+      - 'amp.ps1'
+      - 'amp.cmd'
+      - '.github/workflows/test-install.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  test-install:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false  # Continue testing other platforms even if one fails
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            shell: bash
+            install_cmd: 'bash install.sh'
+          - os: macos-latest
+            shell: bash
+            install_cmd: 'bash install.sh'
+          - os: windows-latest
+            shell: pwsh
+            install_cmd: 'powershell -ExecutionPolicy Bypass -File install.ps1'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Git (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+
+      - name: Install Git (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          # Git is pre-installed on macOS runners
+          git --version
+
+      - name: Install Git (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # Git is pre-installed on Windows runners
+          git --version
+
+      - name: Run installation script
+        shell: ${{ matrix.shell }}
+        run: ${{ matrix.install_cmd }}
+
+      - name: Verify amp command exists (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          source ~/.${SHELL##*/}rc || source ~/.amp/amp.sh
+          type amp || (echo "amp command not found" && exit 1)
+
+      - name: Verify amp command exists (Windows - PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          . $PROFILE
+          Get-Command amp -ErrorAction Stop
+
+      - name: Verify amp command exists (Windows - CMD)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          where amp || (echo amp command not found in PATH && exit 1)
+
+      - name: Test amp bootstrap (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          source ~/.${SHELL##*/}rc || source ~/.amp/amp.sh
+
+          # Create test directory
+          mkdir -p /tmp/test-workspace
+          cd /tmp/test-workspace
+
+          # Run amp with --version flag (should trigger bootstrap)
+          # Note: This will fail if Claude Code isn't installed, but we're testing the bootstrap
+          amp --version || true
+
+          # Check that amplifier was cloned
+          if [ ! -d "$HOME/.amp/main" ]; then
+            echo "Amplifier repository not cloned"
+            exit 1
+          fi
+
+          # Check that .amp_ready flag was created
+          if [ ! -f "$HOME/.amp/.amp_ready" ]; then
+            echo "Bootstrap did not complete"
+            exit 1
+          fi
+
+          echo "✅ Bootstrap successful"
+
+      - name: Test amp bootstrap (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          . $PROFILE
+
+          # Create test directory
+          New-Item -ItemType Directory -Force -Path "$env:TEMP\test-workspace" | Out-Null
+          Set-Location "$env:TEMP\test-workspace"
+
+          # Run amp with --version flag (should trigger bootstrap)
+          # Note: This will fail if Claude Code isn't installed, but we're testing the bootstrap
+          try {
+            amp --version
+          } catch {
+            # Expected to fail without Claude Code installed
+          }
+
+          # Check that amplifier was cloned
+          if (-not (Test-Path "$env:USERPROFILE\.amp\main")) {
+            Write-Error "Amplifier repository not cloned"
+            exit 1
+          }
+
+          # Check that .amp_ready flag was created
+          if (-not (Test-Path "$env:USERPROFILE\.amp\.amp_ready")) {
+            Write-Error "Bootstrap did not complete"
+            exit 1
+          }
+
+          Write-Host "✅ Bootstrap successful"
+
+      - name: Verify prerequisites installed
+        shell: ${{ matrix.shell }}
+        run: |
+          python --version
+          git --version
+          uv --version
+
+      - name: Display installation logs (Unix)
+        if: runner.os != 'Windows' && always()
+        shell: bash
+        run: |
+          echo "=== Installation Log ==="
+          cat ~/.amp/.amp.log 2>/dev/null || echo "No log file found"
+
+      - name: Display installation logs (Windows)
+        if: runner.os == 'Windows' && always()
+        shell: pwsh
+        run: |
+          Write-Host "=== Installation Log ==="
+          Get-Content "$env:USERPROFILE\.amp\.amp.log" -ErrorAction SilentlyContinue
+
+  test-install-without-prereqs:
+    name: Test clean install on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            shell: bash
+          - os: windows-latest
+            shell: pwsh
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Deliberately skip Python setup to test bootstrapping
+
+      - name: Remove uv if present (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          rm -rf ~/.cargo/bin/uv || true
+
+      - name: Remove uv if present (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-Item "$env:USERPROFILE\.cargo\bin\uv.exe" -Force -ErrorAction SilentlyContinue
+
+      - name: Run installation (should install missing deps)
+        shell: ${{ matrix.shell }}
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            bash install.sh
+          elif [ "${{ runner.os }}" = "Windows" ]; then
+            powershell -ExecutionPolicy Bypass -File install.ps1
+          fi
+
+      - name: Verify all prerequisites were installed
+        shell: ${{ matrix.shell }}
+        run: |
+          python --version
+          git --version
+          uv --version
