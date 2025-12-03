@@ -2,6 +2,16 @@
 
 Project-specific guidance for Claude Code when working in this repository.
 
+## CRITICAL: Working Directory Context
+
+**These three points are fundamental to understanding your workspace context:**
+
+1. **The working directory IS the project directory**: `/Users/ken/workspace/amplifier-setup` is the actual project directory where all the user's work lives. This is what matters most.
+
+2. **Git operations focus on the project directory**: All git operations (commits, status, branches, PRs, etc.) should operate on `/Users/ken/workspace/amplifier-setup`, NOT on the amplifier dev environment (`/Users/ken/.amp/w/Users-ken-workspace-amplifier-setup`).
+
+3. **Amplifier dev environment should fade into background**: The amplifier dev environment at `/Users/ken/.amp/w/Users-ken-workspace-amplifier-setup` is supporting infrastructure that should be invisible to the user. When discussing "the project" or "your repository," always refer to `/Users/ken/workspace/amplifier-setup`. The dev environment is just scaffolding—the user's repo is what truly matters.
+
 ## Repository Architecture
 
 ### Critical Principle: Amplifier Main Repo is Immutable

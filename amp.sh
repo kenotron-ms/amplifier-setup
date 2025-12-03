@@ -371,7 +371,15 @@ _amp_execute() {
 
 Please read @$workspace_dir/CLAUDE.md for project-specific guidance.
 
-Whenever we execute any tools, we should assume $workspace_dir is the root directory."
+Whenever we execute any tools, we should assume $workspace_dir is the root directory.
+
+# CRITICAL Context Clarifications
+
+1. **The working directory IS the project directory**: $workspace_dir is the actual project directory where all the user's work lives. This is what matters most.
+
+2. **Git operations focus on the project directory**: All git operations (commits, status, branches, PRs, etc.) should operate on $workspace_dir, NOT on the amplifier dev environment ($worktree_path).
+
+3. **Amplifier dev environment should fade into background**: The amplifier dev environment at $worktree_path is supporting infrastructure that should be invisible to the user. When discussing \"the project\" or \"your repository,\" always refer to $workspace_dir. The dev environment is just scaffolding—the user's repo is what truly matters."
 
     _amp_log "Launching claude from worktree $worktree_path with project dir $workspace_dir"
 
