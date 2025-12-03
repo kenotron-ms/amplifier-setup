@@ -118,12 +118,34 @@ else
     echo "✓ uv installed"
 fi
 
-# Check Claude Code
+# Check/install Claude Code
+echo ""
 if command -v claude &> /dev/null; then
-    echo "✓ Claude Code: $(claude --version 2>&1 | head -1)"
+    VERSION=$(claude --version 2>&1 | head -1)
+    echo "✓ Claude Code: $VERSION"
 else
-    echo "⚠️  Claude Code not found (will be needed to use amp)"
-    echo "   Install from: https://docs.anthropic.com/en/docs/claude-code/install"
+    echo "Installing Claude Code..."
+    echo "  (Using native binary installer - no Node.js required)"
+
+    # Try to install Claude Code automatically
+    if curl -fsSL https://claude.ai/install.sh | bash; then
+        # Reload PATH to pick up claude command
+        export PATH="$HOME/.local/bin:$PATH"
+
+        # Verify installation
+        if command -v claude &> /dev/null; then
+            VERSION=$(claude --version 2>&1 | head -1)
+            echo "✓ Claude Code installed: $VERSION"
+        else
+            echo "⚠️  Claude Code installation completed but 'claude' command not found"
+            echo "   You may need to restart your terminal or add ~/.local/bin to PATH"
+            echo "   Or install manually: https://docs.anthropic.com/en/docs/claude-code/install"
+        fi
+    else
+        echo "⚠️  Failed to install Claude Code automatically"
+        echo "   Please install manually: https://docs.anthropic.com/en/docs/claude-code/install"
+        echo "   Then run this installer again"
+    fi
 fi
 
 echo ""

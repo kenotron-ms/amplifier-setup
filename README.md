@@ -109,7 +109,7 @@ This creates friction, especially for non-technical users.
 
 ### Prerequisites
 
-The installer automatically installs most prerequisites, but you'll need:
+The installer automatically installs all prerequisites:
 
 **Windows:**
 - **Windows 10 1809+ or Windows 11** (for winget package manager)
@@ -122,13 +122,11 @@ The installer automatically installs most prerequisites, but you'll need:
 - **Python 3.11+** (install manually: `sudo apt install python3` or equivalent)
 - **Git** (install manually: `sudo apt install git` or equivalent)
 
-**All platforms need:**
-- **Claude Code** - [Installation](https://docs.anthropic.com/en/docs/claude-code/install)
-
-The installer will automatically install:
+**The installer automatically installs:**
 - ✅ Python 3.12 (if not present)
-- ✅ Git (if not present)
-- ✅ uv (package manager)
+- ✅ Git (if not present - Windows/Mac only)
+- ✅ uv (Python package manager)
+- ✅ **Claude Code** (using native binary installer - no Node.js required)
 
 ### Installation Options
 

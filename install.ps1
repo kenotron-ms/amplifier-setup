@@ -129,12 +129,36 @@ try {
         Write-Host "✓ uv installed" -ForegroundColor Green
     }
 
-    # Check Claude Code
+    # Check/install Claude Code
+    Write-Host ""
     if (Get-Command claude -ErrorAction SilentlyContinue) {
-        Write-Host "✓ Claude Code installed" -ForegroundColor Green
+        $claudeVersion = claude --version 2>&1 | Select-Object -First 1
+        Write-Host "✓ Claude Code found: $claudeVersion" -ForegroundColor Green
     } else {
-        Write-Host "⚠️  Claude Code not found (will be needed to use amp)" -ForegroundColor Yellow
-        Write-Host "   Install from: https://docs.anthropic.com/en/docs/claude-code/install" -ForegroundColor Yellow
+        Write-Host "Installing Claude Code..." -ForegroundColor Yellow
+        Write-Host "  (Using native binary installer - no Node.js required)" -ForegroundColor Cyan
+
+        try {
+            # Download and run the official Claude Code installer
+            irm https://claude.ai/install.ps1 | iex
+
+            # Refresh PATH to pick up claude command
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+            # Verify installation
+            if (Get-Command claude -ErrorAction SilentlyContinue) {
+                $claudeVersion = claude --version 2>&1 | Select-Object -First 1
+                Write-Host "✓ Claude Code installed: $claudeVersion" -ForegroundColor Green
+            } else {
+                Write-Host "⚠️  Claude Code installation completed but 'claude' command not found" -ForegroundColor Yellow
+                Write-Host "   You may need to restart your terminal" -ForegroundColor Yellow
+                Write-Host "   Or install manually: https://docs.anthropic.com/en/docs/claude-code/install" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host "⚠️  Failed to install Claude Code automatically" -ForegroundColor Yellow
+            Write-Host "   Error: $_" -ForegroundColor Red
+            Write-Host "   Please install manually: https://docs.anthropic.com/en/docs/claude-code/install" -ForegroundColor Yellow
+        }
     }
 
     Write-Host ""

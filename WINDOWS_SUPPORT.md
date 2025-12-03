@@ -20,26 +20,29 @@ curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/in
 
 ### Automatically Installed
 
-**Windows (via winget):**
+**Windows (via winget/native installer):**
 - ✅ Python 3.12 (if not present)
 - ✅ Git (if not present)
 - ✅ uv (Python package manager)
+- ✅ **Claude Code** (native binary - no Node.js required)
 - ✅ `amp.ps1` (PowerShell function)
 - ✅ `amp.cmd` (CMD wrapper)
 
-**Mac (via Homebrew):**
+**Mac (via Homebrew/native installer):**
 - ✅ Python 3.12 (if not present)
 - ✅ Git (if not present)
 - ✅ uv (Python package manager)
+- ✅ **Claude Code** (native binary - no Node.js required)
 - ✅ `amp.sh` (Bash function)
 
-**Linux:**
+**Linux (via native installer):**
 - ✅ uv (Python package manager)
+- ✅ **Claude Code** (native binary - no Node.js required)
 - ✅ `amp.sh` (Bash function)
 - ⚠️ Python & Git must be installed manually first
 
-### User Must Install
-- **Claude Code** - Required on all platforms
+### Nothing to Install Manually!
+All prerequisites are now automatically installed, including Claude Code.
 
 ## Cross-Platform Shell Support
 
@@ -74,7 +77,7 @@ amplifier-setup/
    - Check for Python → Install via `winget install Python.Python.3.12`
    - Check for Git → Install via `winget install Git.Git`
    - Check for uv → Install via official installer
-   - Check for Claude Code → Warn if missing
+   - Check for Claude Code → **Install via native binary installer** (no Node.js required)
 
 2. **Install amp Command**
    - Download `amp.ps1` to `~/.amp/`
@@ -93,7 +96,7 @@ amplifier-setup/
    - Check for Python → Install via Homebrew on Mac
    - Check for Git → Install via Homebrew on Mac
    - Check for uv → Install via official installer
-   - Check for Claude Code → Warn if missing
+   - Check for Claude Code → **Install via native binary installer** (no Node.js required)
 
 2. **Install amp Command**
    - Download `amp.sh` to `~/.amp/`
@@ -155,7 +158,6 @@ Two GitHub Actions workflows test cross-platform support:
 
 1. **Linux**: Python & Git must be pre-installed (can't auto-install due to distro variety)
 2. **Windows**: Requires Windows 10 1809+ for winget (older versions need manual Python/Git install)
-3. **Claude Code**: Must be installed manually on all platforms
 
 ## Future Improvements
 
@@ -209,8 +211,13 @@ amp --version
 - Install Python & Git manually from websites
 - Re-run installer
 
-### All Platforms: "Claude not found"
-- Install Claude Code from: https://docs.anthropic.com/en/docs/claude-code/install
+### All Platforms: "Claude not found" after installation
+- The installer should have installed Claude Code automatically
+- Try restarting your terminal/shell
+- Verify PATH includes Claude Code location:
+  - **Windows**: `where claude`
+  - **Mac/Linux**: `which claude`
+- If still not found, install manually: https://docs.anthropic.com/en/docs/claude-code/install
 - Verify: `claude --version`
 
 ### Bootstrap fails
