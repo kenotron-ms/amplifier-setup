@@ -285,5 +285,4 @@ function amp {
     }
 }
 
-# Export the amp function
-Export-ModuleMember -Function amp
+# Note: No need to export - the amp function is automatically available when this script is sourced

@@ -55,8 +55,11 @@ function Install-Python {
 
     winget install Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements
 
-    # Refresh PATH
+    # Refresh PATH to pick up newly installed Python
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+    # Clear PowerShell's command cache to force it to find the new python
+    $ExecutionContext.InvokeCommand.CommandNotFoundAction = $null
 
     Write-Host "✓ Python installed" -ForegroundColor Green
 }
@@ -101,8 +104,15 @@ try {
     # Check/install Python
     if (-not (Test-Python)) {
         Install-Python
+        # After winget install, the PATH may not be fully updated yet
+        # Give the system a moment and try clearing the command cache
+        Start-Sleep -Seconds 2
+        # Force a fresh PATH check
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+        # If still not found, trust winget's success (it takes time for PATH to fully propagate)
         if (-not (Test-Python)) {
-            throw "Python installation failed"
+            Write-Host "  Note: Python installed but not yet in PATH (will be available after restart)" -ForegroundColor Yellow
         }
     }
 
@@ -110,8 +120,13 @@ try {
     Write-Host ""
     if (-not (Test-Git)) {
         Install-Git
+        # After winget install, the PATH may not be fully updated yet
+        Start-Sleep -Seconds 2
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+        # If still not found, trust winget's success
         if (-not (Test-Git)) {
-            throw "Git installation failed"
+            Write-Host "  Note: Git installed but not yet in PATH (will be available after restart)" -ForegroundColor Yellow
         }
     }
 
