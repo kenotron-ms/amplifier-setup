@@ -7,10 +7,132 @@
 # This script is idempotent - safe to run multiple times to get latest version.
 #
 # What it does:
-# 1. Downloads latest amp.sh and amp-workspace.sh from GitHub
-# 2. Installs them to ~/.amp/
-# 3. Adds source line to shell RC files (if not already present)
-# 4. Sources for current session
+# 1. Checks and installs prerequisites (Python, Git, uv)
+# 2. Downloads latest amp.sh and amp-workspace.sh from GitHub
+# 3. Installs them to ~/.amp/
+# 4. Adds source line to shell RC files (if not already present)
+# 5. Sources for current session
+
+set -e
+
+# =============================================================================
+# BOOTSTRAP: Check and Install Prerequisites
+# =============================================================================
+
+# Detect OS
+OS="$(uname -s)"
+case "$OS" in
+    Linux*)  PLATFORM="Linux";;
+    Darwin*) PLATFORM="Mac";;
+    *)       echo "Unsupported OS: $OS"; exit 1;;
+esac
+
+echo ""
+echo "🔍 Checking prerequisites..."
+echo ""
+
+# Check Python
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+    VERSION=$(python3 --version 2>&1)
+    echo "✓ Python: $VERSION"
+
+    # Check version >= 3.11
+    MAJOR=$(echo "$VERSION" | grep -oE '[0-9]+' | head -1)
+    MINOR=$(echo "$VERSION" | grep -oE '[0-9]+' | head -2 | tail -1)
+
+    if [ "$MAJOR" -lt 3 ] || ([ "$MAJOR" -eq 3 ] && [ "$MINOR" -lt 11 ]); then
+        echo "⚠️  Warning: Python 3.11+ recommended (found $MAJOR.$MINOR)"
+        NEED_PYTHON=1
+    else
+        NEED_PYTHON=0
+    fi
+elif command -v python &> /dev/null; then
+    PYTHON_CMD="python"
+    VERSION=$(python --version 2>&1)
+    echo "✓ Python: $VERSION"
+    NEED_PYTHON=0
+else
+    echo "✗ Python not found"
+    NEED_PYTHON=1
+fi
+
+# Install Python if needed
+if [ $NEED_PYTHON -eq 1 ]; then
+    if [ "$PLATFORM" = "Mac" ]; then
+        echo ""
+        echo "📦 Installing Python via Homebrew..."
+
+        if ! command -v brew &> /dev/null; then
+            echo "📦 Installing Homebrew first..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+
+        brew install python@3.12
+        PYTHON_CMD="python3"
+        echo "✓ Python installed"
+    else
+        echo ""
+        echo "❌ Please install Python 3.11+ for your Linux distribution:"
+        echo "  Ubuntu/Debian: sudo apt install python3"
+        echo "  Fedora/RHEL:   sudo dnf install python3"
+        echo "  Arch:          sudo pacman -S python"
+        exit 1
+    fi
+fi
+
+# Check Git
+if command -v git &> /dev/null; then
+    VERSION=$(git --version)
+    echo "✓ Git: $VERSION"
+else
+    echo "✗ Git not found"
+
+    if [ "$PLATFORM" = "Mac" ]; then
+        echo ""
+        echo "📦 Installing Git via Homebrew..."
+        brew install git
+        echo "✓ Git installed"
+    else
+        echo ""
+        echo "❌ Please install Git for your Linux distribution:"
+        echo "  Ubuntu/Debian: sudo apt install git"
+        echo "  Fedora/RHEL:   sudo dnf install git"
+        echo "  Arch:          sudo pacman -S git"
+        exit 1
+    fi
+fi
+
+# Check uv
+if command -v uv &> /dev/null; then
+    VERSION=$(uv --version)
+    echo "✓ uv: $VERSION"
+else
+    echo "✗ uv not found"
+    echo ""
+    echo "📦 Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    # Add to PATH for current session
+    export PATH="$HOME/.cargo/bin:$PATH"
+    echo "✓ uv installed"
+fi
+
+# Check Claude Code
+if command -v claude &> /dev/null; then
+    echo "✓ Claude Code: $(claude --version 2>&1 | head -1)"
+else
+    echo "⚠️  Claude Code not found (will be needed to use amp)"
+    echo "   Install from: https://docs.anthropic.com/en/docs/claude-code/install"
+fi
+
+echo ""
+echo "✅ Prerequisites ready"
+echo ""
+
+# =============================================================================
+# INSTALL: amp command
+# =============================================================================
 
 set -e
 

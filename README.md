@@ -19,6 +19,27 @@
 
 ### One-Time Installation
 
+#### Windows
+
+**Step 1: Install** (PowerShell or Command Prompt)
+
+```powershell
+irm https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.ps1 | iex
+```
+
+**Step 2: Reload your shell**
+
+- **PowerShell**: `. $PROFILE`
+- **CMD**: Close and reopen Command Prompt
+
+**Step 3: Done!**
+
+Installation complete. Works in PowerShell, pwsh, and CMD.
+
+---
+
+#### Mac / Linux
+
 **Step 1: Install**
 
 ```bash
@@ -26,8 +47,6 @@ curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/in
 ```
 
 **Step 2: Reload your shell**
-
-Copy and paste this command (works for bash and zsh):
 
 ```bash
 source ~/.${SHELL##*/}rc
@@ -90,16 +109,40 @@ This creates friction, especially for non-technical users.
 
 ### Prerequisites
 
-Before installing `amp`, ensure you have:
-- **git** - [Installation](https://git-scm.com/downloads)
-- **make** - Usually pre-installed on macOS/Linux
-- **python3** - [Installation](https://www.python.org/downloads/)
-- **uv** - [Installation](https://docs.astral.sh/uv/getting-started/installation/)
-- **claude** - [Installation](https://docs.anthropic.com/en/docs/claude-code/install)
+The installer automatically installs most prerequisites, but you'll need:
+
+**Windows:**
+- **Windows 10 1809+ or Windows 11** (for winget package manager)
+- **PowerShell** or **Command Prompt**
+
+**Mac:**
+- **Homebrew** (installed automatically if missing)
+
+**Linux:**
+- **Python 3.11+** (install manually: `sudo apt install python3` or equivalent)
+- **Git** (install manually: `sudo apt install git` or equivalent)
+
+**All platforms need:**
+- **Claude Code** - [Installation](https://docs.anthropic.com/en/docs/claude-code/install)
+
+The installer will automatically install:
+- ✅ Python 3.12 (if not present)
+- ✅ Git (if not present)
+- ✅ uv (package manager)
 
 ### Installation Options
 
-**Copy and paste this into your terminal:**
+#### Windows
+
+**PowerShell or Command Prompt:**
+
+```powershell
+irm https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.ps1 | iex
+```
+
+#### Mac / Linux
+
+**Terminal:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh | bash

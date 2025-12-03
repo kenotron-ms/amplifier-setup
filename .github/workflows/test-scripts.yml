@@ -1,0 +1,156 @@
+name: Test Installation Scripts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint-shell-scripts:
+    name: Lint Shell Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run shellcheck on install.sh
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck install.sh || true  # Don't fail on warnings for now
+
+      - name: Run shellcheck on amp.sh
+        run: |
+          shellcheck amp.sh || true
+
+  test-unix-install:
+    name: Test Unix Install (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test install script syntax
+        run: bash -n install.sh
+
+      - name: Test amp.sh syntax
+        run: bash -n amp.sh
+
+      - name: Run dry-run installation
+        run: |
+          # Test that script runs without errors
+          bash install.sh || true
+
+      - name: Verify files were created
+        run: |
+          ls -la ~/.amp/
+          test -f ~/.amp/amp.sh || (echo "amp.sh not installed" && exit 1)
+          test -f ~/.amp/amp-workspace.sh || (echo "amp-workspace.sh not installed" && exit 1)
+
+  test-windows-install:
+    name: Test Windows Install
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test PowerShell script syntax
+        shell: pwsh
+        run: |
+          $errors = $null
+          $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content install.ps1 -Raw), [ref]$errors)
+          if ($errors) {
+            Write-Error "Syntax errors in install.ps1"
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+      - name: Test amp.ps1 syntax
+        shell: pwsh
+        run: |
+          $errors = $null
+          $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content amp.ps1 -Raw), [ref]$errors)
+          if ($errors) {
+            Write-Error "Syntax errors in amp.ps1"
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+      - name: Run dry-run installation
+        shell: pwsh
+        run: |
+          # Test that script runs
+          . .\install.ps1
+
+      - name: Verify files were created
+        shell: pwsh
+        run: |
+          Get-ChildItem "$env:USERPROFILE\.amp"
+          Test-Path "$env:USERPROFILE\.amp\amp.ps1" || (Write-Error "amp.ps1 not installed" && exit 1)
+          Test-Path "$env:USERPROFILE\.amp\amp.cmd" || (Write-Error "amp.cmd not installed" && exit 1)
+
+      - name: Test CMD wrapper syntax
+        shell: cmd
+        run: |
+          REM Just verify the file exists and has no obvious syntax errors
+          type %USERPROFILE%\.amp\amp.cmd
+
+      - name: Verify PATH was updated
+        shell: pwsh
+        run: |
+          $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+          if ($userPath -notlike "*\.amp*") {
+            Write-Error "PATH was not updated"
+            exit 1
+          }
+          Write-Host "✅ PATH contains .amp directory"
+
+  test-amp-function:
+    name: Test amp function on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install uv
+
+      - name: Install amp (Unix)
+        if: runner.os != 'Windows'
+        run: bash install.sh
+
+      - name: Install amp (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: . .\install.ps1
+
+      - name: Source amp function (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          source ~/.amp/amp.sh
+          # Verify function is defined
+          type amp || (echo "amp function not defined" && exit 1)
+
+      - name: Load amp function (Windows - PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          . $PROFILE
+          # Verify function is defined
+          Get-Command amp -ErrorAction Stop
+
+      - name: Test amp command is in PATH (Windows - CMD)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          where amp || (echo amp not in PATH && exit 1)
+          echo ✅ amp found in PATH
