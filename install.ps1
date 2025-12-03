@@ -181,16 +181,30 @@ try {
     Write-Host "📁 Creating installation directory..." -ForegroundColor Cyan
     New-Item -ItemType Directory -Force -Path $AMP_HOME | Out-Null
 
-    # Download amp.ps1 (PowerShell script)
-    Write-Host "📥 Downloading amp.ps1..." -ForegroundColor Cyan
-    Invoke-WebRequest -Uri "$BASE_URL/amp.ps1" -OutFile $AMP_SCRIPT
-    Write-Host "✅ Downloaded amp.ps1" -ForegroundColor Green
+    # Check if we're running from a local clone (for development/testing)
+    $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $LOCAL_AMP_PS1 = Join-Path $SCRIPT_DIR "amp.ps1"
+    $LOCAL_AMP_CMD = Join-Path $SCRIPT_DIR "amp.cmd"
 
-    # Download amp.cmd (CMD batch file)
-    Write-Host "📥 Downloading amp.cmd..." -ForegroundColor Cyan
-    $AMP_CMD = "$AMP_HOME\amp.cmd"
-    Invoke-WebRequest -Uri "$BASE_URL/amp.cmd" -OutFile $AMP_CMD
-    Write-Host "✅ Downloaded amp.cmd" -ForegroundColor Green
+    if (Test-Path $LOCAL_AMP_PS1) {
+        # Use local copy (development mode)
+        Write-Host "📦 Using local scripts from repository..." -ForegroundColor Cyan
+        Copy-Item -Force $LOCAL_AMP_PS1 $AMP_SCRIPT
+        if (Test-Path $LOCAL_AMP_CMD) {
+            Copy-Item -Force $LOCAL_AMP_CMD "$AMP_HOME\amp.cmd"
+        }
+        Write-Host "✅ Installed local scripts" -ForegroundColor Green
+    } else {
+        # Download from GitHub
+        Write-Host "📥 Downloading amp.ps1..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri "$BASE_URL/amp.ps1" -OutFile $AMP_SCRIPT
+        Write-Host "✅ Downloaded amp.ps1" -ForegroundColor Green
+
+        Write-Host "📥 Downloading amp.cmd..." -ForegroundColor Cyan
+        $AMP_CMD = "$AMP_HOME\amp.cmd"
+        Invoke-WebRequest -Uri "$BASE_URL/amp.cmd" -OutFile $AMP_CMD
+        Write-Host "✅ Downloaded amp.cmd" -ForegroundColor Green
+    }
 
     # Add to PATH for CMD access
     Write-Host ""
