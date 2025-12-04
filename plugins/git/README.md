@@ -62,8 +62,15 @@ This will:
 This will:
 - Check your git state
 - Commit any uncommitted changes (with your approval)
+- **Ensure documentation compliance (automatic)**:
+  - Discover repository documentation standards
+  - Update all required documentation based on code changes
+  - Run required checks (linting, testing, type checking)
+  - Generate/update auto-generated files
+  - Block PR submission if compliance fails
 - Push your branch to remote
-- Create a pull request using `gh` CLI
+- Discover repository PR standards from docs and recent PRs
+- Create a pull request using `gh` CLI following discovered conventions
 
 ## Requirements
 

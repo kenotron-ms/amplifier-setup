@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-12-04
+
+#### Git Plugin Enhancements
+- **Automatic documentation compliance in `/submit-pr`**: Command now automatically discovers and enforces repository documentation standards
+  - Discovers standards from `CONTRIBUTING.md`, `MAINTENANCE.md`, `CLAUDE.md`
+  - Automatically updates required documentation based on code changes
+  - Runs pre-PR checks (linting, testing, type checking)
+  - Blocks PR submission if compliance fails
+  - Uses general-purpose agent (or specialized `docs-compliance-agent` if available)
+  - Creates compliance commit automatically when updates are made
+  - Provides detailed compliance report with status of each requirement
+
 ### Added - 2025-12-02
 
 #### Worktree-based Workspace System
