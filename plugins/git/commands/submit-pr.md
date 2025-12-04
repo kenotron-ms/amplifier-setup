@@ -2,6 +2,8 @@
 
 Submit a pull request from the current branch with proper commit hygiene.
 
+**🎯 Smart Standards Discovery**: This command automatically discovers and follows repository-specific PR standards by reading documentation files (`claude.md`, `contributing.md`, `maintenance.md`) from the repo. It adapts PR titles and descriptions to match each repository's conventions.
+
 ## Important: Project Directory
 
 **All git commands must run in the actual project directory, not the Claude worktree.**
@@ -76,7 +78,34 @@ If there are uncommitted changes:
    git push -u origin $(git branch --show-current)
    ```
 
-### Step 4: Create Pull Request
+### Step 4: Discover Repository Documentation Standards
+
+Before creating the PR, discover and read repository-specific PR standards:
+
+1. **Search for documentation files** in these locations:
+   - Root: `/`, `/docs`, `/ai_context`
+   - Look for files (case-insensitive):
+     - `claude.md` or `CLAUDE.md`
+     - `contributing.md` or `CONTRIBUTING.md`
+     - `maintenance.md` or `MAINTENANCE.md`
+   - Use recursive search to check subdirectories
+
+2. **Read and extract PR standards** from discovered files:
+   - Look for sections about:
+     - PR title format/conventions (e.g., "[Component] Description")
+     - PR description requirements (required sections like "## Summary", "## Testing")
+     - Commit message patterns
+     - Any special formatting or content expectations
+   - If multiple files found, combine standards from all
+   - If no standards found, use sensible defaults
+
+3. **Analyze recent PRs** for patterns (optional):
+   ```bash
+   cd "$PROJECT_DIR"
+   gh pr list --state merged --limit 5 --json title,body
+   ```
+
+### Step 5: Create Pull Request
 
 1. Check if a PR already exists for this branch:
    ```bash
@@ -84,9 +113,14 @@ If there are uncommitted changes:
    gh pr view --json number,url 2>/dev/null || echo "No existing PR"
    ```
 
-2. If no PR exists, create one:
-   - Generate a PR title from the branch name or recent commits
-   - Generate a PR description summarizing the changes
+2. If no PR exists, create one **following discovered standards**:
+   - Generate a PR title that matches the discovered format conventions
+   - Generate a PR description that includes:
+     - Required sections from discovered standards
+     - Summary of changes based on git diff analysis
+     - Test plan or verification steps
+     - Any other required content
+   - Maintain the tone and style consistent with the repo's standards
    - Ask the user to confirm or modify using AskUserQuestion
    - Create the PR:
      ```bash
@@ -95,7 +129,7 @@ If there are uncommitted changes:
 
 3. If PR exists, ask if user wants to update it or view it
 
-### Step 5: Report Result
+### Step 6: Report Result
 
 Show the user:
 - PR URL
