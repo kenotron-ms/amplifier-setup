@@ -1,8 +1,12 @@
+---
+description: Submit a pull request with automatic documentation compliance
+---
+
 # Submit Pull Request
 
-Submit a pull request from the current branch with proper commit hygiene.
+Submit a pull request from the current branch with proper commit hygiene and automatic documentation compliance.
 
-**🎯 Smart Standards Discovery**: This command automatically discovers and follows repository-specific PR standards by reading documentation files (`claude.md`, `contributing.md`, `maintenance.md`) from the repo. It adapts PR titles and descriptions to match each repository's conventions.
+**🎯 Smart Standards Discovery**: This command automatically discovers and follows repository-specific PR standards by reading documentation files (`CONTRIBUTING.md`, `MAINTENANCE.md`, `CLAUDE.md`). It ensures all documentation is updated and all required steps are completed before creating the PR.
 
 ## Important: Project Directory
 
@@ -40,7 +44,7 @@ git remote -v
 **Check:**
 - If on `main` or `master` branch, STOP and ask the user to create a feature branch first
 - If there are uncommitted changes, proceed to commit them
-- If already on a feature branch with no changes, proceed to push/PR
+- If already on a feature branch with no changes, proceed to compliance check
 
 ### Step 2: Handle Uncommitted Changes
 
@@ -65,7 +69,173 @@ If there are uncommitted changes:
 
 4. Create the commit with the agreed message
 
-### Step 3: Push to Remote
+### Step 3: Ensure Documentation Compliance (Automatic)
+
+**This step ALWAYS runs to ensure documentation is never out of sync with code changes.**
+
+1. **Find repository documentation standards:**
+   ```bash
+   cd "$PROJECT_DIR"
+
+   # Use git ls-files to find tracked documentation
+   DOCS=$(git ls-files '*.md' | grep -iE '(contributing|maintenance|claude)\.md$')
+
+   if [[ -z "$DOCS" ]]; then
+     echo "📋 No documentation standards found (CONTRIBUTING.md, MAINTENANCE.md, CLAUDE.md)"
+     echo "   Proceeding without compliance check"
+   else
+     echo "📋 Found documentation standards:"
+     echo "$DOCS"
+     echo ""
+     echo "🔍 Ensuring documentation compliance..."
+   fi
+   ```
+
+2. **If standards found, ensure compliance using general-purpose agent:**
+
+   Use Task tool with `subagent_type: 'general-purpose'`
+
+   **Note**: Repositories can optionally create a specialized `docs-compliance-agent` for better performance. See documentation for details.
+
+   **Provide this detailed prompt:**
+
+   ```
+   TASK: Ensure complete documentation compliance before PR submission
+
+   REPOSITORY STANDARDS:
+   {Read each file in DOCS and provide full contents}
+
+   CHANGES IN THIS PR:
+   Branch: {output of: git branch --show-current}
+   Base branch: {main or master - check which exists}
+
+   Diff: {output of: git diff origin/{base}...HEAD or git diff HEAD~5..HEAD if no remote}
+   Commits: {output of: git log origin/{base}...HEAD --oneline or git log -5 --oneline if no remote}
+
+   YOUR MISSION:
+
+   1. **Read ALL documentation standards carefully**
+      - Understand what documentation must be updated
+      - Understand what commands must be run
+      - Understand what files must be generated
+      - Understand conditional requirements (e.g., "if API changed, update X")
+
+   2. **Analyze the changes to determine which requirements apply**
+      - What code changed?
+      - What features were added/modified?
+      - What APIs were affected?
+      - What user-facing changes occurred?
+      - Are there breaking changes?
+
+   3. **Execute EVERYTHING required automatically (NO ASKING):**
+
+      **Documentation Updates:**
+      - Update CHANGELOG.md with appropriate entries
+      - Update API documentation if APIs changed
+      - Update README.md if features/setup changed
+      - Update configuration docs if config changed
+      - Update migration docs if breaking changes
+      - Any other docs mentioned in standards
+
+      **Run Required Commands:**
+      - Linting: `npm run lint`, `make lint`, etc.
+      - Testing: `npm run test`, `make test`, etc.
+      - Formatting: `npm run format`, etc.
+      - Type checking: `npm run typecheck`, `make check`, etc.
+      - Doc generation: `npm run docs:generate`, etc.
+
+      **File Generation:**
+      - Regenerate any auto-generated files mentioned
+      - Update version numbers if required
+      - Generate types, schemas, etc.
+
+      **Handle Conditionals Intelligently:**
+      - If standards say "if API changed, update docs/api/", check if API actually changed
+      - Only apply requirements that are relevant to this PR
+      - Note what was skipped and why
+
+   4. **Stage all changes:**
+      ```bash
+      git add -A
+      ```
+
+   5. **Report what you did in this EXACT format:**
+
+      ```
+      COMPLIANCE STATUS: [COMPLETE|FAILED]
+
+      DOCUMENTATION UPDATES:
+      - File: path/to/file.md
+        Status: ✅ Updated | ⊘ Skipped | ❌ Failed
+        Changes: Brief description of what was updated
+        Reason: Why this was updated/skipped
+
+      COMMANDS RUN:
+      - Command: command here
+        Status: ✅ Passed | ❌ Failed
+        Output: [Include if relevant, especially for failures]
+
+      FILES GENERATED:
+      - File: path/to/generated/file
+        Status: ✅ Generated | ❌ Failed
+
+      SKIPPED (and why):
+      - Requirement: what was skipped
+        Reason: why it was skipped (e.g., "No API changes in this PR")
+
+      FAILURES: [Only if status is FAILED]
+      - What failed
+        Error details
+        What needs to be fixed
+
+      STAGED CHANGES READY TO COMMIT: [Yes|No]
+      ```
+
+   CRITICAL RULES:
+   - Be thorough - don't skip steps
+   - Be accurate - update docs to exactly match code changes
+   - Be intelligent - apply conditional requirements correctly
+   - Be efficient - run commands in optimal order
+   - Handle failures gracefully - report clearly and stop if critical
+   - Stage everything - make sure all updates are staged
+   - NO ASKING - just execute everything automatically
+   ```
+
+3. **Process agent response:**
+
+   **If COMPLIANCE STATUS: COMPLETE:**
+   ```bash
+   # Check if agent made any changes
+   cd "$PROJECT_DIR"
+   if [[ -n $(git diff --cached) ]]; then
+     echo "📝 Committing documentation compliance updates..."
+     git commit -m "docs: ensure documentation compliance
+
+- Updated all required documentation per repository standards
+- Ran all pre-PR checks and commands
+- Generated/updated auto-generated files
+
+🤖 Generated with [Amplifier](https://github.com/microsoft/amplifier)
+
+Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.com>"
+     echo "✅ Documentation compliance complete"
+   else
+     echo "✅ Documentation already compliant, no updates needed"
+   fi
+   ```
+
+   **If COMPLIANCE STATUS: FAILED:**
+   ```bash
+   echo "❌ Documentation compliance FAILED"
+   echo ""
+   echo "The following issues must be fixed before submitting PR:"
+   echo "{Show FAILURES section from agent report}"
+   echo ""
+   echo "Please fix these issues and run /git:submit-pr again"
+   exit 1
+   ```
+
+### Step 4: Push to Remote
 
 1. Check if the branch exists on remote:
    ```bash
@@ -78,34 +248,24 @@ If there are uncommitted changes:
    git push -u origin $(git branch --show-current)
    ```
 
-### Step 4: Discover Repository Documentation Standards
+### Step 5: Discover Repository PR Standards
 
-Before creating the PR, discover and read repository-specific PR standards:
+Before creating the PR, discover repository-specific PR title and description standards:
 
-1. **Search for documentation files** in these locations:
-   - Root: `/`, `/docs`, `/ai_context`
-   - Look for files (case-insensitive):
-     - `claude.md` or `CLAUDE.md`
-     - `contributing.md` or `CONTRIBUTING.md`
-     - `maintenance.md` or `MAINTENANCE.md`
-   - Use recursive search to check subdirectories
+1. **Standards are already loaded from Step 3** (CONTRIBUTING.md, MAINTENANCE.md, CLAUDE.md)
 
-2. **Read and extract PR standards** from discovered files:
-   - Look for sections about:
-     - PR title format/conventions (e.g., "[Component] Description")
-     - PR description requirements (required sections like "## Summary", "## Testing")
-     - Commit message patterns
-     - Any special formatting or content expectations
-   - If multiple files found, combine standards from all
-   - If no standards found, use sensible defaults
-
-3. **Analyze recent PRs** for patterns (optional):
+2. **Analyze recent PRs for patterns:**
    ```bash
    cd "$PROJECT_DIR"
    gh pr list --state merged --limit 5 --json title,body
    ```
 
-### Step 5: Create Pull Request
+   Look for:
+   - Title format (e.g., "feat:", "fix:", "[Component] Description")
+   - Common description sections
+   - PR body structure
+
+### Step 6: Create Pull Request
 
 1. Check if a PR already exists for this branch:
    ```bash
@@ -114,6 +274,7 @@ Before creating the PR, discover and read repository-specific PR standards:
    ```
 
 2. If no PR exists, create one **following discovered standards**:
+
    - Generate a PR title that matches the discovered format conventions
    - Generate a PR description that includes:
      - Required sections from discovered standards
@@ -121,30 +282,46 @@ Before creating the PR, discover and read repository-specific PR standards:
      - Test plan or verification steps
      - Any other required content
    - Maintain the tone and style consistent with the repo's standards
-   - Ask the user to confirm or modify using AskUserQuestion
-   - Create the PR:
-     ```bash
-     gh pr create --title "PR_TITLE" --body "PR_BODY"
-     ```
+
+   Ask the user to confirm or modify using AskUserQuestion
+
+   Create the PR:
+   ```bash
+   gh pr create --title "PR_TITLE" --body "PR_BODY"
+   ```
 
 3. If PR exists, ask if user wants to update it or view it
 
-### Step 6: Report Result
+### Step 7: Report Result
 
 Show the user:
 - PR URL
 - PR number
+- Summary of what was done (commits, docs updated, commands run)
 - Next steps (e.g., request reviewers, add labels)
 
 ## Error Handling
 
 - If `gh` CLI is not installed, inform user and provide installation instructions
 - If not authenticated with GitHub, guide user through `gh auth login`
-- If push fails due to conflicts, suggest running `/pull` first
+- If push fails due to conflicts, suggest running `git pull --rebase` first
 - If PROJECT_DIR is not set, inform user and use current directory as fallback
+- If compliance check fails, stop and report what needs to be fixed
 
 ## Important Notes
 
 - Never force push without explicit user confirmation
 - Always show what will be committed before committing
 - Use AskUserQuestion for any destructive or significant actions
+- Documentation compliance is AUTOMATIC - never skip it
+- If compliance fails, PR submission is blocked until fixed
+
+## Optimization
+
+For repositories with complex requirements, consider creating a specialized agent:
+
+**`.claude/agents/docs-compliance-agent.md`:**
+
+This command will automatically use `docs-compliance-agent` if it exists, otherwise it uses the general-purpose agent. The specialized agent can be tailored to your repository's specific requirements for better performance.
+
+See project documentation for details on creating specialized compliance agents.
