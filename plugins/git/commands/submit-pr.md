@@ -62,12 +62,10 @@ If there are uncommitted changes:
    git add -A
    ```
 
-3. Generate a commit message based on the changes:
+3. Generate and create a commit automatically:
    - Analyze the diff to understand what changed
    - Write a concise, descriptive commit message following conventional commits format
-   - Ask the user to confirm or modify the commit message using AskUserQuestion
-
-4. Create the commit with the agreed message
+   - Create the commit immediately (no confirmation needed)
 
 ### Step 3: Ensure Documentation Compliance (Automatic)
 
@@ -273,7 +271,7 @@ Before creating the PR, discover repository-specific PR title and description st
    gh pr view --json number,url 2>/dev/null || echo "No existing PR"
    ```
 
-2. If no PR exists, create one **following discovered standards**:
+2. If no PR exists, create one automatically **following discovered standards**:
 
    - Generate a PR title that matches the discovered format conventions
    - Generate a PR description that includes:
@@ -282,15 +280,12 @@ Before creating the PR, discover repository-specific PR title and description st
      - Test plan or verification steps
      - Any other required content
    - Maintain the tone and style consistent with the repo's standards
+   - Create the PR immediately (no confirmation needed):
+     ```bash
+     gh pr create --title "PR_TITLE" --body "PR_BODY"
+     ```
 
-   Ask the user to confirm or modify using AskUserQuestion
-
-   Create the PR:
-   ```bash
-   gh pr create --title "PR_TITLE" --body "PR_BODY"
-   ```
-
-3. If PR exists, ask if user wants to update it or view it
+3. If PR exists, report the existing PR URL
 
 ### Step 7: Report Result
 
@@ -311,10 +306,10 @@ Show the user:
 ## Important Notes
 
 - Never force push without explicit user confirmation
-- Always show what will be committed before committing
-- Use AskUserQuestion for any destructive or significant actions
+- All actions are automatic - no user confirmation needed for commits or PR creation
 - Documentation compliance is AUTOMATIC - never skip it
 - If compliance fails, PR submission is blocked until fixed
+- Process is designed for speed - no unnecessary prompts or questions
 
 ## Optimization
 
