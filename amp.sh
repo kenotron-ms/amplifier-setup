@@ -27,6 +27,7 @@
 AMP_HOME="${AMP_HOME:-$HOME/.amp}"
 AMP_AMPLIFIER_DIR="${AMP_AMPLIFIER_DIR:-$HOME/.amp/main}"
 AMP_REPO="https://github.com/microsoft/amplifier.git"
+AMP_BRANCH="${AMP_BRANCH:-amplifier-claude}"  # Branch to track
 UPDATE_CHECK_INTERVAL=$((24 * 3600))  # 24 hours in seconds
 
 # Version file configuration
@@ -248,13 +249,91 @@ _amp_check_prereqs() {
 }
 
 # ============================================================================
+# Branch Migration
+# ============================================================================
+
+_amp_migrate_branch() {
+    # Migrate from old main branch to new amplifier-claude branch
+    local current_dir
+    current_dir=$(pwd)
+
+    cd "$AMP_AMPLIFIER_DIR" || return 0
+
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+    if [[ "$current_branch" == "main" ]] && [[ "$AMP_BRANCH" != "main" ]]; then
+        echo "🔄 Migrating from main branch to $AMP_BRANCH..."
+        _amp_log "Detected main branch, migrating to $AMP_BRANCH"
+
+        # Fetch the new branch
+        if ! git fetch origin "$AMP_BRANCH" 2>/dev/null; then
+            echo "⚠️  Warning: Could not fetch $AMP_BRANCH branch"
+            _amp_log "Warning: Failed to fetch $AMP_BRANCH during migration"
+            cd "$current_dir"
+            return 0
+        fi
+
+        # Switch to the new branch
+        if ! git checkout "$AMP_BRANCH" 2>/dev/null; then
+            # If checkout fails, try to create tracking branch
+            if ! git checkout -b "$AMP_BRANCH" "origin/$AMP_BRANCH" 2>/dev/null; then
+                echo "⚠️  Warning: Could not switch to $AMP_BRANCH branch"
+                _amp_log "Warning: Failed to checkout $AMP_BRANCH during migration"
+                cd "$current_dir"
+                return 0
+            fi
+        fi
+
+        # Set upstream
+        git branch --set-upstream-to="origin/$AMP_BRANCH" "$AMP_BRANCH" 2>/dev/null
+
+        echo "✅ Migrated to $AMP_BRANCH branch"
+        _amp_log "Successfully migrated to $AMP_BRANCH"
+
+        # Migrate all workspace branches
+        _amp_migrate_workspaces
+    fi
+
+    cd "$current_dir"
+}
+
+_amp_migrate_workspaces() {
+    # Migrate all workspace branches to track amplifier-claude
+    echo "🔄 Migrating workspace branches..."
+    _amp_log "Migrating workspace branches to track $AMP_BRANCH"
+
+    local workspace_branches
+    workspace_branches=$(git branch --list 'workspace/*' --format='%(refname:short)')
+
+    if [[ -z "$workspace_branches" ]]; then
+        _amp_log "No workspace branches to migrate"
+        return 0
+    fi
+
+    local count=0
+    while IFS= read -r branch; do
+        if [[ -n "$branch" ]]; then
+            # Update the upstream for each workspace branch
+            if git branch --set-upstream-to="origin/$AMP_BRANCH" "$branch" 2>/dev/null; then
+                ((count++))
+                _amp_log "Migrated workspace branch: $branch"
+            fi
+        fi
+    done <<< "$workspace_branches"
+
+    echo "✅ Migrated $count workspace branches"
+    _amp_log "Migrated $count workspace branches"
+}
+
+# ============================================================================
 # Clone
 # ============================================================================
 
 _amp_clone() {
-    echo "📦 Cloning amplifier repository..."
+    echo "📦 Cloning amplifier repository (branch: $AMP_BRANCH)..."
 
-    if ! git clone "$AMP_REPO" "$AMP_AMPLIFIER_DIR"; then
+    if ! git clone -b "$AMP_BRANCH" "$AMP_REPO" "$AMP_AMPLIFIER_DIR"; then
         _amp_error "Failed to clone repository" \
             "Check network connection and repository URL"
         return 1
@@ -283,6 +362,11 @@ _amp_clone() {
 _amp_update() {
     local current_time
     current_time=$(date +%s)
+
+    # Migrate from main to amplifier-claude if needed
+    if [[ -d "$AMP_AMPLIFIER_DIR" ]]; then
+        _amp_migrate_branch
+    fi
 
     # Check if update check is needed based on mode
     if [[ "$AMP_UPDATE_MODE" == "off" ]]; then
@@ -335,7 +419,7 @@ _amp_update() {
         }
 
         # Fetch latest changes
-        if ! git fetch origin main --quiet 2>&1; then
+        if ! git fetch origin "$AMP_BRANCH" --quiet 2>&1; then
             _amp_log "Warning: Failed to fetch updates"
             exit 0
         fi
@@ -344,7 +428,7 @@ _amp_update() {
         local local_sha
         local remote_sha
         local_sha=$(git rev-parse --short=7 HEAD)
-        remote_sha=$(git rev-parse --short=7 origin/main)
+        remote_sha=$(git rev-parse --short=7 "origin/$AMP_BRANCH")
 
         if [[ "$local_sha" != "$remote_sha" ]]; then
             echo "📥 Pulling changes..."
@@ -352,7 +436,7 @@ _amp_update() {
             # Check if dependency files changed
             local needs_install=false
             local changed_files
-            changed_files=$(git diff --name-only HEAD origin/main)
+            changed_files=$(git diff --name-only HEAD "origin/$AMP_BRANCH")
 
             if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
                 needs_install=true
@@ -361,14 +445,14 @@ _amp_update() {
                 _amp_log "No dependency changes detected, skipping reinstall"
             fi
 
-            if ! git pull origin main --quiet 2>&1; then
+            if ! git pull origin "$AMP_BRANCH" --quiet 2>&1; then
                 # Check if this is an unrelated histories error
-                if git pull origin main --quiet 2>&1 | grep -q "refusing to merge unrelated histories"; then
-                    echo "⚠️  Detected diverged histories, resetting to origin/main..."
+                if git pull origin "$AMP_BRANCH" --quiet 2>&1 | grep -q "refusing to merge unrelated histories"; then
+                    echo "⚠️  Detected diverged histories, resetting to origin/$AMP_BRANCH..."
                     _amp_log "Git histories diverged in auto-update, performing hard reset"
-                    if ! git reset --hard origin/main; then
-                        _amp_error "Failed to reset to origin/main" \
-                            "Try manually: cd $AMP_AMPLIFIER_DIR && git reset --hard origin/main"
+                    if ! git reset --hard "origin/$AMP_BRANCH"; then
+                        _amp_error "Failed to reset to origin/$AMP_BRANCH" \
+                            "Try manually: cd $AMP_AMPLIFIER_DIR && git reset --hard origin/$AMP_BRANCH"
                         exit 1
                     fi
                 else
@@ -455,8 +539,11 @@ _amp_bootstrap() {
     if [[ ! -d "$AMP_AMPLIFIER_DIR" ]]; then
         _amp_clone || return 1
     else
-        echo "📦 Amplifier already exists, updating to latest..."
+        echo "📦 Amplifier already exists, checking for branch migration..."
         _amp_log "Updating existing amplifier installation"
+
+        # Migrate from main to amplifier-claude if needed
+        _amp_migrate_branch
 
         pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
             _amp_error "Failed to change to amplifier directory" \
@@ -465,7 +552,7 @@ _amp_bootstrap() {
         }
 
         echo "📥 Fetching latest changes..."
-        if ! git fetch origin main; then
+        if ! git fetch origin "$AMP_BRANCH"; then
             echo "⚠️  Warning: Failed to fetch updates, using existing version"
             _amp_log "Warning: Failed to fetch during bootstrap"
             popd > /dev/null
@@ -474,20 +561,20 @@ _amp_bootstrap() {
             local remote_sha
             local needs_install=false
             local_sha=$(git rev-parse --short=7 HEAD)
-            remote_sha=$(git rev-parse --short=7 origin/main)
+            remote_sha=$(git rev-parse --short=7 "origin/$AMP_BRANCH")
 
             if [[ "$local_sha" != "$remote_sha" ]]; then
                 echo "📥 Pulling latest changes..."
 
                 # Check if dependency files will change
                 local changed_files
-                changed_files=$(git diff --name-only HEAD origin/main)
+                changed_files=$(git diff --name-only HEAD "origin/$AMP_BRANCH")
                 if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
                     needs_install=true
                     _amp_log "Dependency files changed during bootstrap, will reinstall"
                 fi
 
-                if ! git pull origin main; then
+                if ! git pull origin "$AMP_BRANCH"; then
                     echo "⚠️  Warning: Failed to pull updates, using existing version"
                     _amp_log "Warning: Failed to pull during bootstrap"
                 else
