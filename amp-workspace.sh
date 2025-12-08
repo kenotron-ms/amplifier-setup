@@ -139,8 +139,8 @@ _amp_get_or_create_worktree() {
             # Branch exists, use it without creating new one
             git worktree add "$worktree_path" "$branch_name" 2>&1 | grep -v "^$" >&2
         else
-            # Branch doesn't exist, create new one from main
-            git worktree add -b "$branch_name" "$worktree_path" main 2>&1 | grep -v "^$" >&2
+            # Branch doesn't exist, create new one from current branch (amplifier-claude)
+            git worktree add -b "$branch_name" "$worktree_path" "$AMP_BRANCH" 2>&1 | grep -v "^$" >&2
         fi
     ) || {
         echo "❌ Error: Failed to create worktree" >&2
