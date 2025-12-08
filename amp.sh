@@ -262,6 +262,34 @@ _amp_migrate_branch() {
     local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
+    # Handle case where already on target branch but it's diverged
+    if [[ "$current_branch" == "$AMP_BRANCH" ]]; then
+        # Fetch latest
+        git fetch origin "$AMP_BRANCH" 2>/dev/null || true
+
+        # Check if diverged
+        local behind ahead
+        behind=$(git rev-list --count HEAD..origin/$AMP_BRANCH 2>/dev/null || echo "0")
+        ahead=$(git rev-list --count origin/$AMP_BRANCH..HEAD 2>/dev/null || echo "0")
+
+        if [[ "$ahead" -gt 0 ]] && [[ "$behind" -gt 0 ]]; then
+            echo "⚠️  Your $AMP_BRANCH branch has diverged from upstream (ahead: $ahead, behind: $behind)"
+            echo "🔄 Resetting to origin/$AMP_BRANCH to ensure clean state..."
+            _amp_log "Branch diverged, resetting to origin/$AMP_BRANCH"
+
+            if git reset --hard "origin/$AMP_BRANCH" 2>/dev/null; then
+                echo "✅ Reset to upstream $AMP_BRANCH"
+                _amp_migrate_workspaces
+            else
+                echo "⚠️  Warning: Could not reset to origin/$AMP_BRANCH"
+                _amp_log "Warning: Failed to reset during divergence fix"
+            fi
+        fi
+
+        cd "$current_dir"
+        return 0
+    fi
+
     if [[ "$current_branch" == "main" ]] && [[ "$AMP_BRANCH" != "main" ]]; then
         echo "🔄 Migrating from main branch to $AMP_BRANCH..."
         _amp_log "Detected main branch, migrating to $AMP_BRANCH"
@@ -274,19 +302,43 @@ _amp_migrate_branch() {
             return 0
         fi
 
-        # Switch to the new branch
-        if ! git checkout "$AMP_BRANCH" 2>/dev/null; then
-            # If checkout fails, try to create tracking branch
+        # Check if local branch exists
+        if git show-ref --verify --quiet "refs/heads/$AMP_BRANCH"; then
+            # Local branch exists - switch to it
+            if ! git checkout "$AMP_BRANCH" 2>/dev/null; then
+                echo "⚠️  Warning: Could not switch to existing $AMP_BRANCH branch"
+                _amp_log "Warning: Failed to checkout existing $AMP_BRANCH during migration"
+                cd "$current_dir"
+                return 0
+            fi
+
+            # Set upstream
+            git branch --set-upstream-to="origin/$AMP_BRANCH" "$AMP_BRANCH" 2>/dev/null
+
+            # Check if diverged
+            local behind ahead
+            behind=$(git rev-list --count HEAD..origin/$AMP_BRANCH 2>/dev/null || echo "0")
+            ahead=$(git rev-list --count origin/$AMP_BRANCH..HEAD 2>/dev/null || echo "0")
+
+            if [[ "$ahead" -gt 0 ]] || [[ "$behind" -gt 0 ]]; then
+                echo "⚠️  Local and remote $AMP_BRANCH have diverged (ahead: $ahead, behind: $behind)"
+                echo "🔄 Resetting to origin/$AMP_BRANCH to ensure clean state..."
+                _amp_log "Branch diverged, resetting to origin/$AMP_BRANCH"
+
+                if ! git reset --hard "origin/$AMP_BRANCH" 2>/dev/null; then
+                    echo "⚠️  Warning: Could not reset to origin/$AMP_BRANCH"
+                    _amp_log "Warning: Failed to reset during migration"
+                fi
+            fi
+        else
+            # Local branch doesn't exist - create it from remote
             if ! git checkout -b "$AMP_BRANCH" "origin/$AMP_BRANCH" 2>/dev/null; then
-                echo "⚠️  Warning: Could not switch to $AMP_BRANCH branch"
-                _amp_log "Warning: Failed to checkout $AMP_BRANCH during migration"
+                echo "⚠️  Warning: Could not create $AMP_BRANCH branch"
+                _amp_log "Warning: Failed to create $AMP_BRANCH during migration"
                 cd "$current_dir"
                 return 0
             fi
         fi
-
-        # Set upstream
-        git branch --set-upstream-to="origin/$AMP_BRANCH" "$AMP_BRANCH" 2>/dev/null
 
         echo "✅ Migrated to $AMP_BRANCH branch"
         _amp_log "Successfully migrated to $AMP_BRANCH"
