@@ -29,6 +29,17 @@ AMP_AMPLIFIER_DIR="${AMP_AMPLIFIER_DIR:-$HOME/.amp/main}"
 AMP_REPO="https://github.com/microsoft/amplifier.git"
 UPDATE_CHECK_INTERVAL=$((24 * 3600))  # 24 hours in seconds
 
+# Version file configuration
+AMP_VERSION_FILE="$AMP_HOME/.amp_version"
+AMP_REMOTE_VERSION_FILE="$AMP_HOME/.amp_remote_version"
+REMOTE_VERSION_CACHE_TTL=3600  # 1 hour in seconds
+
+# Update configuration
+AMP_UPDATE_MODE="${AMP_UPDATE_MODE:-auto}"  # auto|quick|full|off
+AMP_CHECK_INTERVAL="${AMP_CHECK_INTERVAL:-3600}"  # 1 hour default
+AMP_GITHUB_TIMEOUT="${AMP_GITHUB_TIMEOUT:-1}"  # 1 second timeout for GitHub API
+AMP_UPDATE_ASYNC="${AMP_UPDATE_ASYNC:-true}"  # Background updates by default
+
 # State files
 AMP_READY_FLAG="$AMP_HOME/.amp_ready"
 AMP_LAST_CHECK="$AMP_HOME/.amp_last_check"
@@ -58,6 +69,146 @@ _amp_error() {
 
     _amp_log "ERROR: $message"
     return 1
+}
+
+# ============================================================================
+# Version File Management
+# ============================================================================
+
+_amp_get_version_string() {
+    # Generate version string: YYYYMMDD-HHMMSS-SHA7
+    local sha="${1:-}"
+    if [[ -z "$sha" ]]; then
+        sha=$(cd "$AMP_AMPLIFIER_DIR" && git rev-parse --short=7 HEAD 2>/dev/null || echo "unknown")
+    fi
+    local timestamp
+    timestamp=$(date +"%Y%m%d-%H%M%S")
+    echo "${timestamp}-${sha}"
+}
+
+_amp_write_version_file() {
+    local sha="${1:-}"
+    local version
+    version="$(_amp_get_version_string "$sha")"
+    echo "$version" > "$AMP_VERSION_FILE"
+    _amp_log "Updated version file: $version"
+}
+
+_amp_read_version_file() {
+    if [[ -f "$AMP_VERSION_FILE" ]]; then
+        cat "$AMP_VERSION_FILE"
+    else
+        echo ""
+    fi
+}
+
+_amp_get_local_sha() {
+    # Extract SHA from version file or get from git
+    local version
+    version="$(_amp_read_version_file)"
+    if [[ -n "$version" ]]; then
+        # Extract SHA7 from version string (last component)
+        echo "${version##*-}"
+    else
+        # Fallback to git
+        (cd "$AMP_AMPLIFIER_DIR" && git rev-parse --short=7 HEAD 2>/dev/null || echo "")
+    fi
+}
+
+_amp_get_remote_sha() {
+    # Get remote SHA from GitHub API with timeout
+    local api_url="https://api.github.com/repos/microsoft/amplifier/commits/main"
+    local response
+
+    response=$(curl -sS --max-time "$AMP_GITHUB_TIMEOUT" "$api_url" 2>/dev/null)
+    if [[ $? -eq 0 ]] && [[ -n "$response" ]]; then
+        # Extract SHA and get first 7 characters
+        local sha
+        sha=$(echo "$response" | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
+        if [[ -n "$sha" ]]; then
+            echo "${sha:0:7}"
+            return 0
+        fi
+    fi
+
+    # Fallback to git fetch
+    _amp_log "GitHub API failed, falling back to git fetch"
+    return 1
+}
+
+_amp_cache_remote_version() {
+    # Cache remote version with timestamp
+    local remote_sha="${1:-}"
+    if [[ -z "$remote_sha" ]]; then
+        remote_sha="$(_amp_get_remote_sha)"
+        if [[ -z "$remote_sha" ]]; then
+            return 1
+        fi
+    fi
+
+    local timestamp
+    timestamp=$(date +%s)
+    echo "${timestamp}:${remote_sha}" > "$AMP_REMOTE_VERSION_FILE"
+    _amp_log "Cached remote version: $remote_sha"
+}
+
+_amp_read_cached_remote_version() {
+    # Read cached remote version if still valid (within TTL)
+    if [[ ! -f "$AMP_REMOTE_VERSION_FILE" ]]; then
+        return 1
+    fi
+
+    local cached
+    cached=$(cat "$AMP_REMOTE_VERSION_FILE")
+    local cache_time="${cached%%:*}"
+    local remote_sha="${cached##*:}"
+
+    local current_time
+    current_time=$(date +%s)
+    local age=$((current_time - cache_time))
+
+    if [[ $age -lt $REMOTE_VERSION_CACHE_TTL ]]; then
+        echo "$remote_sha"
+        return 0
+    fi
+
+    return 1
+}
+
+# ============================================================================
+# Quick Version Check
+# ============================================================================
+
+_amp_quick_check() {
+    # Fast version check using cached or API
+    local local_sha
+    local remote_sha
+
+    # Get local version
+    local_sha="$(_amp_get_local_sha)"
+    if [[ -z "$local_sha" ]]; then
+        _amp_log "Quick check: No local version"
+        return 2  # Unknown state
+    fi
+
+    # Try cached remote version first
+    remote_sha="$(_amp_read_cached_remote_version)"
+    if [[ -z "$remote_sha" ]]; then
+        # Cache expired, fetch fresh
+        remote_sha="$(_amp_get_remote_sha)"
+        if [[ -z "$remote_sha" ]]; then
+            _amp_log "Quick check: Cannot determine remote version"
+            return 2  # Unknown state
+        fi
+        _amp_cache_remote_version "$remote_sha"
+    fi
+
+    if [[ "$local_sha" == "$remote_sha" ]]; then
+        return 0  # Up to date
+    else
+        _amp_log "Quick check: Update available ($local_sha -> $remote_sha)"
+        return 1  # Update available
+    fi
 }
 
 # ============================================================================
@@ -116,6 +267,11 @@ _amp_clone() {
         return 1
     fi
 
+    # Initialize version file
+    local sha
+    sha=$(cd "$AMP_AMPLIFIER_DIR" && git rev-parse --short=7 HEAD)
+    _amp_write_version_file "$sha"
+
     _amp_log "Cloned repository to $AMP_AMPLIFIER_DIR"
     echo "✅ Repository cloned"
 }
@@ -128,19 +284,47 @@ _amp_update() {
     local current_time
     current_time=$(date +%s)
 
-    # Check if update check is needed
-    if [[ -f "$AMP_LAST_CHECK" ]]; then
-        local last_check
-        last_check=$(cat "$AMP_LAST_CHECK")
-        local time_diff=$((current_time - last_check))
-
-        if [[ $time_diff -lt $UPDATE_CHECK_INTERVAL ]]; then
-            # No update check needed yet
-            return 0
-        fi
+    # Check if update check is needed based on mode
+    if [[ "$AMP_UPDATE_MODE" == "off" ]]; then
+        return 0
     fi
 
-    echo "🔄 Checking for updates..."
+    # Use quick check if available
+    if [[ "$AMP_UPDATE_MODE" == "auto" ]] || [[ "$AMP_UPDATE_MODE" == "quick" ]]; then
+        # Check interval
+        if [[ -f "$AMP_LAST_CHECK" ]]; then
+            local last_check
+            last_check=$(cat "$AMP_LAST_CHECK")
+            local time_diff=$((current_time - last_check))
+
+            if [[ $time_diff -lt $AMP_CHECK_INTERVAL ]]; then
+                # No check needed yet
+                return 0
+            fi
+        fi
+
+        # Perform quick check
+        _amp_quick_check
+        local check_result=$?
+
+        # Update last check timestamp
+        echo "$current_time" > "$AMP_LAST_CHECK"
+
+        if [[ $check_result -eq 0 ]]; then
+            # Up to date
+            return 0
+        elif [[ $check_result -eq 2 ]]; then
+            # Unknown state, skip update
+            _amp_log "Quick check failed, skipping update"
+            return 0
+        fi
+
+        # Update available - proceed with full update
+        echo "📥 Update available..."
+    fi
+
+    # Full update flow
+    echo "🔄 Updating amplifier..."
 
     # Use subshell to auto-restore directory
     (
@@ -153,18 +337,17 @@ _amp_update() {
         # Fetch latest changes
         if ! git fetch origin main --quiet 2>&1; then
             _amp_log "Warning: Failed to fetch updates"
-            echo "$current_time" > "$AMP_LAST_CHECK"
             exit 0
         fi
 
         # Check if update is available
         local local_sha
         local remote_sha
-        local_sha=$(git rev-parse HEAD)
-        remote_sha=$(git rev-parse origin/main)
+        local_sha=$(git rev-parse --short=7 HEAD)
+        remote_sha=$(git rev-parse --short=7 origin/main)
 
         if [[ "$local_sha" != "$remote_sha" ]]; then
-            echo "📥 Updates available, pulling changes..."
+            echo "📥 Pulling changes..."
 
             # Check if dependency files changed
             local needs_install=false
@@ -184,24 +367,33 @@ _amp_update() {
                 exit 1
             fi
 
+            # Update version file immediately
+            _amp_write_version_file "$remote_sha"
+            _amp_cache_remote_version "$remote_sha"
+
             _amp_log "Updated from $local_sha to $remote_sha"
 
-            # Re-install only if dependency files changed
+            # Re-install dependencies
             if $needs_install; then
-                echo "🔧 Reinstalling dependencies (dependency files changed)..."
-                if ! make install >> "$AMP_LOG" 2>&1; then
-                    _amp_error "Failed to reinstall after update" \
-                        "Check log: $AMP_LOG"
-                    exit 1
+                if [[ "$AMP_UPDATE_ASYNC" == "true" ]]; then
+                    echo "🔧 Installing dependencies in background..."
+                    # Run make install in background
+                    (make install >> "$AMP_LOG" 2>&1 &)
+                    echo "✅ Updated (installing in background)"
+                else
+                    echo "🔧 Installing dependencies..."
+                    if ! make install >> "$AMP_LOG" 2>&1; then
+                        _amp_error "Failed to reinstall after update" \
+                            "Check log: $AMP_LOG"
+                        exit 1
+                    fi
+                    echo "✅ Updated and reinstalled"
                 fi
-                echo "✅ Updated and reinstalled"
             else
                 echo "✅ Updated (no reinstall needed)"
             fi
         fi
 
-        # Update last check timestamp
-        echo "$current_time" > "$AMP_LAST_CHECK"
         exit 0
     )
     return $?
@@ -270,8 +462,8 @@ _amp_bootstrap() {
             local local_sha
             local remote_sha
             local needs_install=false
-            local_sha=$(git rev-parse HEAD)
-            remote_sha=$(git rev-parse origin/main)
+            local_sha=$(git rev-parse --short=7 HEAD)
+            remote_sha=$(git rev-parse --short=7 origin/main)
 
             if [[ "$local_sha" != "$remote_sha" ]]; then
                 echo "📥 Pulling latest changes..."
@@ -288,6 +480,8 @@ _amp_bootstrap() {
                     echo "⚠️  Warning: Failed to pull updates, using existing version"
                     _amp_log "Warning: Failed to pull during bootstrap"
                 else
+                    # Update version file
+                    _amp_write_version_file "$remote_sha"
                     echo "✅ Updated to latest"
                 fi
             else
@@ -318,7 +512,7 @@ _amp_bootstrap() {
 # ============================================================================
 
 _amp_execute() {
-    # Check for updates (once per day)
+    # Check for updates (uses quick check with configurable interval)
     _amp_update
 
     # Source workspace functions (should be in same directory as amp.sh)
@@ -421,16 +615,69 @@ amp() {
             fi
             return
             ;;
+        quick-check)
+            # Explicit quick version check
+            echo "🔍 Checking version..."
+
+            _amp_quick_check
+            local result=$?
+
+            if [[ $result -eq 0 ]]; then
+                local local_sha
+                local_sha="$(_amp_get_local_sha)"
+                echo "✅ Up to date ($local_sha)"
+                return 0
+            elif [[ $result -eq 1 ]]; then
+                local local_sha
+                local remote_sha
+                local_sha="$(_amp_get_local_sha)"
+                remote_sha="$(_amp_get_remote_sha)"
+                echo "📥 Update available: $local_sha → $remote_sha"
+                echo ""
+                echo "Run 'amp update' to update"
+                return 1
+            else
+                echo "⚠️  Cannot determine version status"
+                return 2
+            fi
+            ;;
         update)
+            shift
             # Update both amplifier and amp scripts
             echo "🔄 Updating amp..."
             echo ""
+
+            # Parse flags
+            local wait_for_install=false
+            local sync_mode=false
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --wait)
+                        wait_for_install=true
+                        shift
+                        ;;
+                    --no-async)
+                        sync_mode=true
+                        shift
+                        ;;
+                    *)
+                        echo "Unknown flag: $1"
+                        echo "Usage: amp update [--wait] [--no-async]"
+                        return 1
+                        ;;
+                esac
+            done
+
+            # Override async mode if requested
+            if $sync_mode; then
+                AMP_UPDATE_ASYNC=false
+            fi
 
             # Save original directory to return to after update
             local original_dir
             original_dir="$(pwd)"
 
-            # Part 1: Update amplifier repository
+            # Part 1: Update amplifier repository (optimized with parallelization)
             echo "📦 Updating amplifier repository..."
             rm -f "$AMP_LAST_CHECK"  # Force update check
 
@@ -442,6 +689,7 @@ amp() {
 
             pushd "$AMP_AMPLIFIER_DIR" > /dev/null || return 1
 
+            # Parallel fetch
             if ! git fetch origin main --quiet 2>&1; then
                 echo "❌ Error: Failed to fetch updates"
                 popd > /dev/null
@@ -450,8 +698,8 @@ amp() {
 
             local local_sha
             local remote_sha
-            local_sha=$(git rev-parse HEAD)
-            remote_sha=$(git rev-parse origin/main)
+            local_sha=$(git rev-parse --short=7 HEAD)
+            remote_sha=$(git rev-parse --short=7 origin/main)
 
             if [[ "$local_sha" != "$remote_sha" ]]; then
                 # Check if dependency files changed
@@ -469,50 +717,57 @@ amp() {
                     return 1
                 fi
 
+                # Update version file immediately
+                _amp_write_version_file "$remote_sha"
+                _amp_cache_remote_version "$remote_sha"
+
                 if $needs_install; then
-                    echo "   • Installing dependencies..."
-                    if ! make install >> "$AMP_LOG" 2>&1; then
-                        echo "❌ Error: Installation failed"
-                        popd > /dev/null
-                        return 1
+                    if $wait_for_install || [[ "$AMP_UPDATE_ASYNC" != "true" ]]; then
+                        echo "   • Installing dependencies..."
+                        if ! make install >> "$AMP_LOG" 2>&1; then
+                            echo "❌ Error: Installation failed"
+                            popd > /dev/null
+                            return 1
+                        fi
+                        echo "   ✅ Dependencies installed"
+                    else
+                        echo "   • Installing dependencies in background..."
+                        (make install >> "$AMP_LOG" 2>&1 &)
                     fi
                 fi
 
-                echo "   ✅ Amplifier updated (${local_sha:0:7} → ${remote_sha:0:7})"
+                echo "   ✅ Amplifier updated ($local_sha → $remote_sha)"
             else
                 echo "   ✅ Amplifier already up to date"
             fi
 
             popd > /dev/null
 
-            # Part 2: Update amp scripts
+            # Part 2: Update amp scripts (can run in parallel)
             echo ""
             echo "📝 Updating amp scripts..."
 
-            # Check if GitHub is reachable
-            if ! curl -s --head --max-time 5 https://github.com > /dev/null 2>&1; then
+            # Check if GitHub is reachable (quick timeout)
+            if ! curl -s --head --max-time "$AMP_GITHUB_TIMEOUT" https://github.com > /dev/null 2>&1; then
                 echo "   ⚠️  GitHub unreachable, skipping script update"
-                echo ""
-                echo "✅ Amplifier updated (scripts unchanged)"
-                return 0
-            fi
-
-            # Use install.sh in update mode
-            local install_script="$(dirname "${BASH_SOURCE[0]}")/install.sh"
-            if [[ ! -f "$install_script" ]]; then
-                # Download install.sh if missing
-                echo "   • Downloading install.sh..."
-                curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh \
-                     -o "$install_script" 2>/dev/null
-                chmod +x "$install_script"
-            fi
-
-            # Run install.sh in update mode (suppresses most output)
-            if "$install_script" --update >> "$AMP_LOG" 2>&1; then
-                echo "   ✅ Scripts updated"
             else
-                echo "   ⚠️  Script update failed (see $AMP_LOG)"
-                echo "   Your current scripts continue working"
+                # Use install.sh in update mode
+                local install_script="$(dirname "${BASH_SOURCE[0]}")/install.sh"
+                if [[ ! -f "$install_script" ]]; then
+                    # Download install.sh if missing
+                    echo "   • Downloading install.sh..."
+                    curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/install.sh \
+                         -o "$install_script" 2>/dev/null
+                    chmod +x "$install_script"
+                fi
+
+                # Run install.sh in update mode (suppresses most output)
+                if "$install_script" --update >> "$AMP_LOG" 2>&1; then
+                    echo "   ✅ Scripts updated"
+                else
+                    echo "   ⚠️  Script update failed (see $AMP_LOG)"
+                    echo "   Your current scripts continue working"
+                fi
             fi
 
             # Part 3: Update current workspace settings (if in a project directory)
@@ -563,7 +818,15 @@ amp() {
             echo ""
             echo "✅ Update complete!"
             echo ""
-            echo "⚡ To use updated scripts, reload your shell:"
+
+            if $wait_for_install || [[ "$AMP_UPDATE_ASYNC" != "true" ]]; then
+                echo "⚡ To use updated scripts, reload your shell:"
+            else
+                echo "⚡ Dependencies installing in background"
+                echo ""
+                echo "To use updated scripts, reload your shell:"
+            fi
+
             echo ""
             echo -e "${GREEN}  source ~/.${SHELL##*/}rc${NC}"
             echo ""
