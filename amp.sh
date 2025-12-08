@@ -361,10 +361,21 @@ _amp_update() {
                 _amp_log "No dependency changes detected, skipping reinstall"
             fi
 
-            if ! git pull origin main --quiet; then
-                _amp_error "Failed to pull updates" \
-                    "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
-                exit 1
+            if ! git pull origin main --quiet 2>&1; then
+                # Check if this is an unrelated histories error
+                if git pull origin main --quiet 2>&1 | grep -q "refusing to merge unrelated histories"; then
+                    echo "⚠️  Detected diverged histories, resetting to origin/main..."
+                    _amp_log "Git histories diverged in auto-update, performing hard reset"
+                    if ! git reset --hard origin/main; then
+                        _amp_error "Failed to reset to origin/main" \
+                            "Try manually: cd $AMP_AMPLIFIER_DIR && git reset --hard origin/main"
+                        exit 1
+                    fi
+                else
+                    _amp_error "Failed to pull updates" \
+                        "Try manually updating: cd $AMP_AMPLIFIER_DIR && git pull"
+                    exit 1
+                fi
             fi
 
             # Update version file immediately
@@ -711,10 +722,21 @@ amp() {
                     needs_install=true
                 fi
 
-                if ! git pull origin main --quiet; then
-                    echo "❌ Error: Failed to pull updates"
-                    popd > /dev/null
-                    return 1
+                if ! git pull origin main --quiet 2>&1; then
+                    # Check if this is an unrelated histories error
+                    if git pull origin main --quiet 2>&1 | grep -q "refusing to merge unrelated histories"; then
+                        echo "   ⚠️  Detected diverged histories, resetting to origin/main..."
+                        _amp_log "Git histories diverged, performing hard reset"
+                        if ! git reset --hard origin/main; then
+                            echo "❌ Error: Failed to reset to origin/main"
+                            popd > /dev/null
+                            return 1
+                        fi
+                    else
+                        echo "❌ Error: Failed to pull updates"
+                        popd > /dev/null
+                        return 1
+                    fi
                 fi
 
                 # Update version file immediately
