@@ -1,0 +1,23 @@
+{
+  "name": "dev-kit",
+  "version": "0.1.0",
+  "description": "Software Development Lifecycle toolkit with commands for feature development, bug fixes, and engineering workflows",
+  "author": {
+    "name": "johannao76"
+  },
+  "commands": [
+    "./commands/new-feature.md",
+    "./commands/new-feature/0-discover.md",
+    "./commands/new-feature/1-requirements.md",
+    "./commands/new-feature/2-design.md",
+    "./commands/new-feature/3-tests.md",
+    "./commands/new-feature/4-implement.md",
+    "./commands/new-feature/5-refactor.md",
+    "./commands/new-feature/6-verify.md",
+    "./commands/new-feature/7-document.md",
+    "./commands/new-feature/8-deploy-prep.md",
+    "./commands/new-feature/9-cleanup.md",
+    "./commands/new-feature/status.md"
+  ],
+  "keywords": ["sdlc", "feature", "development", "workflow", "engineering"]
+}

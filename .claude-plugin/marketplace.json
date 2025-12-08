@@ -16,9 +16,19 @@
       "description": "Git workflow helpers for creating PRs and syncing branches with intelligent conflict resolution",
       "version": "1.0.0",
       "author": {
-        "name": "kenotron-ms"
+        "name": "wkspc-team"
       },
       "keywords": ["git", "pr", "pull-request", "merge", "conflict-resolution"]
+    },
+    {
+      "name": "dev-kit",
+      "source": "./plugins/dev-kit",
+      "description": "Software Development Lifecycle toolkit with TDD workflow for feature development and engineering tasks",
+      "version": "0.1.0",
+      "author": {
+        "name": "wkspc-team"
+      },
+      "keywords": ["sdlc", "tdd", "feature", "development", "workflow", "engineering"]
     }
   ]
 }

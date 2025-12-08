@@ -6,6 +6,7 @@
     "name": "kenotron-ms"
   },
   "commands": [
+    "./commands/commit.md",
     "./commands/pull.md",
     "./commands/submit-pr.md"
   ],
