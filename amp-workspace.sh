@@ -152,7 +152,7 @@ _amp_get_or_create_worktree() {
 
     # Configure marketplace in worktree settings
     echo "🔧 Configuring marketplace..." >&2
-    _amp_configure_marketplace "$worktree_path"
+    _amp_configure_marketplace "$worktree_path" >&2
 
     # Set up virtual environment for this worktree (in subshell)
     echo "🔧 Setting up virtual environment..." >&2

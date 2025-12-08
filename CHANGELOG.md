@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Workspace creation failure in new directories**: Fixed issue where `amp` would fail with "Failed to create/access workspace worktree" when run in a blank folder. The marketplace configuration output was contaminating stdout, causing the directory check to fail. Output is now correctly redirected to stderr.
+
 ### Added - 2025-12-04
 
 #### Git Plugin Enhancements
