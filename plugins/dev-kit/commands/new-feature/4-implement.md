@@ -163,7 +163,7 @@ If feature has chunks, update `progress.md` throughout implementation:
 
 ### Step 5: VERIFY Final GREEN State
 
-**CRITICAL**: Run complete test suite and verify ALL tests pass.
+**CRITICAL**: Run complete test suite and verify 100% passing - NO EXCEPTIONS.
 
 Run with coverage and verbose output:
 
@@ -171,7 +171,7 @@ Run with coverage and verbose output:
 [test command with coverage and verbose]  # e.g., pytest -v --cov, npm test -- --coverage
 ```
 
-**Must see:**
+**REQUIRED outcome:**
 ```
 X unit tests PASSED
 X integration tests PASSED
@@ -181,18 +181,142 @@ Total: X/X tests PASSED (100% GREEN) ✓
 Coverage: XX% (target: 60% unit, 30% integration, 10% e2e)
 ```
 
-**Verify GREEN phase:**
-- [ ] ALL tests passing (not just some)
+**Verify 100% GREEN:**
+- [ ] ALL tests passing (100%, not 93% or 82%)
 - [ ] Coverage targets met (60/30/10 split)
 - [ ] No skipped or ignored tests
 - [ ] No flaky tests (run twice to confirm)
 
-**If any tests fail:**
-- ❌ Implementation incomplete
-- ❌ Fix failing tests before proceeding
-- ❌ Cannot proceed to refactoring with failing tests
+**If ANY tests fail (even 1 test):**
 
-Document final state:
+❌ **STOP - Phase NOT complete. Do NOT mark as done.**
+
+**Automatically attempt to fix failing tests:**
+
+1. **Analyze failure messages** - understand what's wrong
+2. **Determine root cause**:
+   - Is implementation wrong? (most common)
+   - Is test incorrectly written? (rare)
+
+**CRITICAL - Do NOT change tests to match broken code:**
+
+❌ **WRONG approach (taking shortcuts):**
+```
+Test expects: setDockExpanded(false)
+Code does: setDockExpanded(true)
+❌ Change test to expect true ← NO! This hides the bug!
+```
+
+✅ **CORRECT approach:**
+```
+Test expects: setDockExpanded(false)
+Code does: setDockExpanded(true)
+✅ Fix implementation to call setDockExpanded(false) ← YES! Fix the code!
+```
+
+**When to fix IMPLEMENTATION (99% of cases):**
+- ✅ Test expects correct behavior per requirements
+- ✅ Implementation doesn't match requirements
+- ✅ Test is following design spec correctly
+- ✅ **Default assumption: implementation is wrong**
+
+**When to fix TEST (rare, requires careful analysis + USER APPROVAL):**
+- ✅ Test has incorrect assertion (wrong expected value per requirements)
+- ✅ Test doesn't match requirements document
+- ✅ Test has syntax/logic errors
+- ✅ Test is testing implementation details instead of behavior
+- ✅ **Must verify against requirements AND get user approval before changing test!**
+
+**Before changing ANY test, MUST consult user:**
+
+1. **Analyze thoroughly**:
+   - Re-read requirements (01-requirements.md)
+   - Re-read design (02-design.md)
+   - Verify test contradicts requirements
+
+2. **Prepare justification**:
+   ```
+   Test needs to be changed:
+
+   Test: [test name]
+   Current assertion: [what test expects]
+   Issue: [why this is wrong]
+
+   Evidence from requirements:
+   - Requirement says: [quote from 01-requirements.md]
+   - Test expects: [current assertion]
+   - Contradiction: [how they differ]
+
+   Proposed fix:
+   - Change: [current assertion]
+   - To: [new assertion]
+   - Reasoning: [why this matches requirements]
+
+   Is this change correct?
+   1. Yes, update the test
+   2. No, the test is correct - fix implementation instead
+   3. Let's review together
+
+   Your choice: _
+   ```
+
+3. **WAIT for user approval** before changing test
+4. **Only change test if user approves (option 1)**
+
+**When in doubt, fix implementation, not test - ask user if unclear.**
+
+3. **Fix implementation** (most common) - make code match test expectations (automatic)
+4. **Fix tests** (rare) - only after user approves based on justification
+5. **Re-run tests** to verify fix
+6. **Repeat** until tests pass
+
+**You CANNOT:**
+- ❌ Mark phase complete with failing tests
+- ❌ Say "functionally complete" when tests fail
+- ❌ Make excuses ("test design limitations", "singleton issue", "mock interaction")
+- ❌ Skip failing tests
+- ❌ Proceed to Phase 5
+- ❌ Ask user unless truly required
+
+**Iterate automatically until 100% GREEN.**
+
+**The ONLY valid exception - User Input Required:**
+
+If tests fail because user input is truly required:
+
+```
+Tests failing due to missing user input:
+
+[test name]: Requires API key for [service]
+[test name]: Requires database connection string
+
+REQUIRED from user:
+1. [Specific input needed]: [Where to provide it]
+2. [Specific input needed]: [Where to provide it]
+
+After you provide these, I'll re-run tests to verify 100% GREEN.
+
+Are you ready to provide this input?
+1. Yes, here's the input: [user provides]
+2. No, skip these tests for now (explain why)
+3. Let's configure mocks instead
+
+Your choice: _
+```
+
+**Valid user input needs:**
+- ✅ API keys for external services
+- ✅ Database connection strings
+- ✅ Credentials only user knows
+
+**NOT valid exceptions:**
+- ❌ "Test design limitations"
+- ❌ "Singleton pattern issues"
+- ❌ "Mock interaction problems"
+
+**After user provides input, re-run tests - must reach 100% GREEN.**
+
+Document final state ONLY when 100% passing:
 ```markdown
 ## Final State (GREEN Phase Verified)
 - Unit tests: X/X passing (100%) ✓
@@ -205,7 +329,7 @@ Coverage: XX%
 Ready for refactoring phase.
 ```
 
-**Only proceed to Phase 5 if 100% GREEN!**
+**Only proceed to Phase 5 if 100% GREEN - absolutely no exceptions!**
 
 ### Step 6: Update Progress
 

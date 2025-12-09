@@ -120,6 +120,64 @@ Update TodoWrite:
 
 Before writing tests, ensure the test design includes:
 
+#### Test Classification (CRITICAL - Avoid Misclassification)
+
+**UNIT TEST** - Tests single unit in isolation with mocked dependencies:
+- ✅ Tests ONE function/component/module
+- ✅ ALL dependencies are mocked/stubbed
+- ✅ No database, no network, no file system (all mocked)
+- ✅ Fast (<10ms per test)
+- ✅ Example: Component with mocked store, function with mocked DB
+
+**Example UNIT test:**
+```javascript
+// Testing MinimizedDock component in isolation
+mockStore = { dockExpanded: true, setDockExpanded: vi.fn() };
+render(<MinimizedDock />);
+await user.click(collapseButton);
+expect(mockSetDockExpanded).toHaveBeenCalledWith(false); // Mocked function
+```
+
+**INTEGRATION TEST** - Tests multiple units working together with real dependencies:
+- ✅ Tests MULTIPLE modules/components interacting
+- ✅ Uses REAL dependencies (real store, real database, real APIs)
+- ✅ Tests data flow between components
+- ✅ Tests actual persistence (localStorage, database)
+- ✅ Slower (<1s per test)
+- ✅ Example: Component + real Zustand store + localStorage
+
+**Example INTEGRATION test:**
+```javascript
+// Testing MinimizedDock with REAL store and localStorage
+render(<App />); // Real Zustand provider, real localStorage
+await user.click(collapseButton);
+expect(useStore.getState().dockExpanded).toBe(false); // Real store state
+expect(localStorage.getItem('settings')).toContain('dockExpanded":false'); // Real persistence
+```
+
+**E2E TEST** - Tests complete user journey through full system:
+- ✅ Tests COMPLETE user workflow end-to-end
+- ✅ Real browser, real backend, real database
+- ✅ Tests across multiple pages/views
+- ✅ Tests like a real user would use the app
+- ✅ Slowest (seconds per test)
+- ✅ Example: Full flow from login through feature use
+
+**Example E2E test:**
+```javascript
+// Testing complete user flow
+await page.goto('/'); // Real app
+await page.getByRole('button', { name: 'Minimize Project' }).click();
+await page.getByRole('button', { name: 'Collapse sidebar' }).click();
+await page.reload(); // Test persistence across reload
+expect(await page.getByRole('region', { name: 'Dock' })).toHaveAttribute('data-expanded', 'false');
+```
+
+**Quick Classification Guide:**
+- Mocked dependencies? → **Unit test**
+- Real store/DB but single flow? → **Integration test**
+- Complete user journey across system? → **E2E test**
+
 #### Test Isolation (CRITICAL)
 - [ ] **Each test is completely self-contained**
   - Test creates its own test data
@@ -167,6 +225,81 @@ Before writing tests, ensure the test design includes:
 - [ ] Setup (arrange) → Execute (act) → Assert → Teardown
 - [ ] Use beforeEach/afterEach or setUp/tearDown
 - [ ] Teardown runs even if test fails (try/finally, defer, etc.)
+
+#### Test Selectors (CRITICAL)
+
+**Selector Priority** (most to least resilient):
+
+1. **Accessible roles and labels** (BEST - mirrors user interaction)
+   ```javascript
+   getByRole('button', { name: 'Submit' })
+   getByLabelText('Email address')
+   ```
+   Use for: All tests
+
+2. **Test IDs** (explicit contracts)
+   ```javascript
+   data-testid="workspace-create-button"
+   getByTestId('workspace-create-button')
+   ```
+   Use for: Complex scenarios, dynamic content, when semantic queries fail
+
+3. **User-visible text** (natural but fragile)
+   ```javascript
+   getByText('Welcome back')
+   ```
+   Use for: Simple unit tests
+
+**AVOID (brittle, implementation-coupled):**
+- ❌ CSS classes: `.btn-primary` (styling details)
+- ❌ Element IDs for styling: `#header` (implementation)
+- ❌ XPath: `//div[@class='foo']/span[2]` (brittle)
+- ❌ Tag + position: `div > span:nth-child(2)` (breaks easily)
+- ❌ Generic queries: `screen.queryByText('1')` (ambiguous, multiple matches)
+
+**Guidelines:**
+- [ ] Use semantic/accessible selectors by default
+- [ ] Test IDs follow naming scheme: `[component]-[action]-[element]`
+- [ ] If you can't find it accessibly, UI is likely inaccessible
+- [ ] Prefer semantic meaning over exact text: `getByRole('button', { name: /submit/i })`
+- [ ] Use specific, unique selectors (avoid `queryByText('1')` that could match multiple elements)
+
+#### Async Waiting (CRITICAL - Avoid Timeouts)
+
+**AVOID arbitrary timeouts** (flaky, slow, unreliable):
+- ❌ `await page.waitForTimeout(1000)` (arbitrary wait)
+- ❌ `await sleep(500)` (arbitrary delay)
+- ❌ `setTimeout()` in tests (timing-based)
+
+**USE condition-based waits** (reliable, fast, deterministic):
+
+**Playwright:**
+```javascript
+✅ await page.waitForSelector('#element')
+✅ await page.waitForLoadState('networkidle')
+✅ await page.waitForResponse(url => url.includes('/api'))
+✅ await expect(locator).toBeVisible()
+```
+
+**Testing Library:**
+```javascript
+✅ await waitFor(() => expect(element).toBeInTheDocument())
+✅ await findByRole('button', { name: 'Submit' })
+✅ await waitForElementToBeRemoved(() => screen.getByText('Loading'))
+```
+
+**Cypress:**
+```javascript
+✅ cy.get('[data-testid="item"]').should('be.visible')
+✅ cy.contains('Success').should('exist')
+```
+
+**Guidelines:**
+- [ ] Wait for specific elements, not arbitrary time
+- [ ] Wait for network responses, not timeouts
+- [ ] Wait for state changes, not delays
+- [ ] Use framework's built-in wait utilities
+- [ ] If absolutely must use timeout (last resort), add comment explaining why
 
 **When instructing agents to write tests, explicitly require:**
 - "Include proper cleanup in teardown/afterEach"
@@ -567,7 +700,32 @@ Check for:
 - [ ] Individual tests pass when run alone
 - [ ] No "test must run after another test"
 
-**Test 3: Verify cleanup in CI**
+**Test 3: Run in parallel (verify true isolation)**
+```bash
+# Run tests with maximum parallelization
+[test command with parallel workers]
+# pytest: pytest -n auto (requires pytest-xdist)
+# jest: npm test -- --maxWorkers=100%
+# vitest: npx vitest --threads
+# playwright: npx playwright test --workers=4
+```
+
+Check for:
+- [ ] Tests pass with parallel execution
+- [ ] No race conditions
+- [ ] No shared state issues
+- [ ] No database conflicts
+- [ ] No file system conflicts
+
+**If tests fail in parallel but pass sequentially:**
+- ❌ Tests are not properly isolated
+- ❌ Fix: Add proper cleanup
+- ❌ Fix: Remove shared state
+- ❌ Fix: Use test-scoped resources (separate test DB per worker)
+
+**Tests MUST pass in parallel execution**
+
+**Test 4: Verify cleanup in CI**
 ```bash
 # Run full suite
 [test command with verbose output]
