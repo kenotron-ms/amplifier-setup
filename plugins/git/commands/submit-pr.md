@@ -4,9 +4,14 @@ description: Submit a pull request with automatic documentation compliance
 
 # Submit Pull Request
 
-Submit a pull request from the current branch with proper commit hygiene and automatic documentation compliance.
+Complete end-to-end PR workflow: automatically creates branches, commits changes, ensures documentation compliance, monitors CI/CD checks, and merges when approved.
 
 **🎯 Smart Standards Discovery**: This command automatically discovers and follows repository-specific PR standards by reading documentation files (`CONTRIBUTING.md`, `MAINTENANCE.md`, `CLAUDE.md`). It ensures all documentation is updated and all required steps are completed before creating the PR.
+
+**✨ Full Lifecycle Automation**:
+- **Auto-branch**: Creates feature branch if on main/master
+- **Auto-monitor**: Watches PR checks and approval status in real-time
+- **Auto-merge**: Merges and cleans up branches when ready
 
 ## Important: Project Directory
 
@@ -31,20 +36,42 @@ git <command>
 
 Follow these steps in order:
 
-### Step 1: Verify Git State
+### Step 1: Verify Git State and Create Branch if Needed
 
 Run these commands to understand the current state:
 ```bash
 cd "$PROJECT_DIR"
 git status
-git branch --show-current
+CURRENT_BRANCH=$(git branch --show-current)
 git remote -v
+echo "Current branch: $CURRENT_BRANCH"
 ```
 
-**Check:**
-- If on `main` or `master` branch, STOP and ask the user to create a feature branch first
-- If there are uncommitted changes, proceed to commit them
-- If already on a feature branch with no changes, proceed to compliance check
+**Check and handle branches:**
+
+1. **If on `main` or `master` branch, automatically create a feature branch:**
+   ```bash
+   cd "$PROJECT_DIR"
+   CURRENT_BRANCH=$(git branch --show-current)
+
+   if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "master" ]]; then
+     # Generate a branch name based on changes
+     # Analyze git diff to understand what changed
+     # Create a descriptive branch name like: feature/add-user-auth, fix/login-bug, etc.
+
+     echo "📌 Currently on $CURRENT_BRANCH - creating feature branch..."
+
+     # Generate branch name from changes (you should analyze the diff)
+     BRANCH_NAME="feature/$(date +%Y%m%d-%H%M%S)"  # Fallback if can't determine from diff
+
+     git checkout -b "$BRANCH_NAME"
+     echo "✅ Created and switched to branch: $BRANCH_NAME"
+   fi
+   ```
+
+2. **If there are uncommitted changes, proceed to commit them**
+
+3. **If already on a feature branch with no changes, proceed to compliance check**
 
 ### Step 2: Handle Uncommitted Changes
 
@@ -287,13 +314,152 @@ Before creating the PR, discover repository-specific PR title and description st
 
 3. If PR exists, report the existing PR URL
 
-### Step 7: Report Result
+### Step 7: Monitor PR Gates and Status
+
+After PR creation, ask the user if they want to monitor and auto-merge:
+
+```bash
+cd "$PROJECT_DIR"
+
+PR_NUMBER=$(gh pr view --json number -q .number)
+PR_URL=$(gh pr view --json url -q .url)
+
+echo ""
+echo "✅ PR created: $PR_URL"
+echo ""
+echo "Would you like to:"
+echo "1. Monitor PR checks and auto-merge when approved (recommended)"
+echo "2. Exit now and manage PR manually"
+echo ""
+read -p "Enter choice (1 or 2): " CHOICE
+
+if [[ "$CHOICE" != "1" ]]; then
+  echo "PR submitted successfully. You can manage it manually at: $PR_URL"
+  exit 0
+fi
+
+echo ""
+echo "🔍 Monitoring PR status and checks..."
+echo ""
+
+# Show initial status
+gh pr view --json statusCheckRollup,reviewDecision -q '.statusCheckRollup[] | "  [\(.state)] \(.context)"'
+
+echo ""
+echo "Watching for updates... (Press Ctrl+C to stop and exit)"
+echo ""
+
+# Monitor checks in a loop
+PREV_STATE=""
+while true; do
+  # Get current status
+  STATUS=$(gh pr view "$PR_NUMBER" --json statusCheckRollup,reviewDecision,state)
+
+  # Extract check states
+  CHECKS_STATE=$(echo "$STATUS" | jq -r '.statusCheckRollup[]? | "\(.state)|\(.context)"')
+  REVIEW_STATE=$(echo "$STATUS" | jq -r '.reviewDecision // "PENDING"')
+  PR_STATE=$(echo "$STATUS" | jq -r '.state')
+
+  CURRENT_STATE="$CHECKS_STATE|$REVIEW_STATE|$PR_STATE"
+
+  # Only show update if state changed
+  if [[ "$CURRENT_STATE" != "$PREV_STATE" ]]; then
+    echo "$(date '+%H:%M:%S') - Status Update:"
+
+    # Show check statuses
+    echo "$CHECKS_STATE" | while IFS='|' read -r state context; do
+      case "$state" in
+        SUCCESS) echo "  ✅ $context" ;;
+        FAILURE) echo "  ❌ $context" ;;
+        PENDING) echo "  ⏳ $context" ;;
+        *) echo "  ⚪ $context ($state)" ;;
+      esac
+    done
+
+    # Show review status
+    case "$REVIEW_STATE" in
+      APPROVED) echo "  ✅ PR Approved" ;;
+      CHANGES_REQUESTED) echo "  🔄 Changes Requested" ;;
+      PENDING) echo "  ⏳ Awaiting Review" ;;
+    esac
+
+    # Check if PR is ready to merge
+    if [[ "$REVIEW_STATE" == "APPROVED" ]]; then
+      ALL_CHECKS_PASSED=true
+      echo "$CHECKS_STATE" | while IFS='|' read -r state context; do
+        if [[ "$state" != "SUCCESS" && -n "$state" ]]; then
+          ALL_CHECKS_PASSED=false
+          break
+        fi
+      done
+
+      if [[ "$ALL_CHECKS_PASSED" == "true" ]]; then
+        echo ""
+        echo "🎉 PR is approved and all checks passed!"
+        echo "Ready to proceed to merge..."
+        break
+      fi
+    fi
+
+    PREV_STATE="$CURRENT_STATE"
+  fi
+
+  # If PR is closed/merged, stop monitoring
+  if [[ "$PR_STATE" == "MERGED" || "$PR_STATE" == "CLOSED" ]]; then
+    echo "PR state: $PR_STATE"
+    break
+  fi
+
+  sleep 10  # Check every 10 seconds
+done
+```
+
+### Step 8: Auto-Merge and Cleanup
+
+Once the PR is approved and all checks pass:
+
+```bash
+cd "$PROJECT_DIR"
+
+echo ""
+echo "🔀 Merging PR #$PR_NUMBER..."
+
+# Merge the PR
+gh pr merge "$PR_NUMBER" --merge --delete-branch
+
+if [[ $? -eq 0 ]]; then
+  echo "✅ PR merged successfully!"
+
+  # Switch back to main/master
+  BASE_BRANCH=$(gh pr view "$PR_NUMBER" --json baseRefName -q .baseRefName)
+  git checkout "$BASE_BRANCH"
+
+  # Pull latest changes
+  git pull origin "$BASE_BRANCH"
+
+  # Delete local branch
+  BRANCH_NAME=$(git branch --list | grep -v "^\*" | grep -v "$BASE_BRANCH" | tail -1 | xargs)
+  if [[ -n "$BRANCH_NAME" ]]; then
+    git branch -D "$BRANCH_NAME"
+    echo "✅ Deleted local branch: $BRANCH_NAME"
+  fi
+
+  echo ""
+  echo "🎉 Complete! You're back on $BASE_BRANCH with latest changes."
+else
+  echo "❌ Merge failed. Please check the PR manually: $PR_URL"
+  exit 1
+fi
+```
+
+### Step 9: Report Final Result
 
 Show the user:
 - PR URL
 - PR number
-- Summary of what was done (commits, docs updated, commands run)
-- Next steps (e.g., request reviewers, add labels)
+- Merge status
+- Summary of what was done (commits, docs updated, commands run, checks passed, merged)
+- Current branch status
 
 ## Error Handling
 
@@ -305,11 +471,14 @@ Show the user:
 
 ## Important Notes
 
+- **Automatic branch creation**: If on main/master, automatically creates a feature branch
+- **Automatic PR monitoring**: Watches CI/CD checks and approval status in real-time
+- **Automatic merge**: When approved and checks pass, merges PR and cleans up branches
 - Never force push without explicit user confirmation
 - All actions are automatic - no user confirmation needed for commits or PR creation
 - Documentation compliance is AUTOMATIC - never skip it
 - If compliance fails, PR submission is blocked until fixed
-- Process is designed for speed - no unnecessary prompts or questions
+- Process is designed for speed - monitors and completes the entire PR lifecycle
 
 ## Optimization
 

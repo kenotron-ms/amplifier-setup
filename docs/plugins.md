@@ -17,20 +17,26 @@ Git workflow helpers for creating PRs and syncing branches with intelligent conf
 
 **Commands:**
 - `/pull` - Sync your feature branch with latest changes from origin/main
-- `/submit-pr` - Submit a pull request from the current branch
+- `/submit-pr` - Complete PR lifecycle automation from branch creation to merge
 
 **Features:**
 - Intelligent conflict resolution with high-level guidance
 - Automatic rebase workflow
 - Interactive decision-making for conflicts
 - GitHub CLI integration for PR creation
-- **Automatic documentation compliance** - Discovers and enforces repository standards before PR submission:
+
+**Full PR Lifecycle Automation in `/submit-pr`:**
+- **Auto-branch creation**: Creates feature branch automatically if on main/master
+- **Automatic documentation compliance**: Discovers and enforces repository standards before PR submission
   - Discovers standards from `CONTRIBUTING.md`, `MAINTENANCE.md`, `CLAUDE.md`
   - Automatically updates required documentation based on code changes
   - Runs pre-PR checks (linting, testing, type checking)
   - Generates/updates auto-generated files
   - Blocks PR submission if compliance fails
   - Uses general-purpose agent (or specialized `docs-compliance-agent` if available)
+- **Real-time PR monitoring**: Watches CI/CD checks and approval status with live updates
+- **Auto-merge on approval**: When approved and checks pass, merges PR and cleans up branches
+- Complete hands-off workflow: Branch → Commit → Compliance → Monitor → Merge → Cleanup
 
 [See git plugin documentation →](../plugins/git/README.md)
 
