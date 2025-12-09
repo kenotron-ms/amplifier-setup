@@ -13,6 +13,9 @@ Improve code quality while keeping all tests GREEN.
 - Phase 4 (Implementation) must be complete
 - All tests must be passing (GREEN)
 - Required files:
+  - `ai_working/<feature>-<date>/00-discovery.md`
+  - `ai_working/<feature>-<date>/01-requirements.md`
+  - `ai_working/<feature>-<date>/03-test-plan.md`
   - `ai_working/<feature>-<date>/04-implementation.md`
   - `progress.md`
 
@@ -30,6 +33,9 @@ Improve code quality while keeping all tests GREEN.
 Update TodoWrite:
 
 ```markdown
+- [ ] Read previous phase outputs
+- [ ] Located all test files
+- [ ] Verified tests GREEN
 - [ ] Code refactored for simplicity
 - [ ] Self-review complete
 - [ ] Security review complete
@@ -38,15 +44,73 @@ Update TodoWrite:
 - [ ] Review feedback addressed
 ```
 
-### Step 1: Verify Tests Still GREEN
+### Step 1: Read Previous Outputs and Load Context
 
-**REQUIRED**: Confirm starting with all tests passing.
+**REQUIRED**: Read previous phase documents to load full context.
 
+**Use Read tool to load these documents into context:**
+
+1. **Read** `ai_working/<feature>-<date>/00-discovery.md`
+   - Full project context (not just test commands)
+   - Repository patterns and conventions
+   - Infrastructure systems discovered
+   - Test framework and patterns
+
+2. **Read** `ai_working/<feature>-<date>/01-requirements.md`
+   - Full requirements (zen-architect needs this for verification)
+   - Acceptance criteria
+   - Assumptions and verified facts
+
+3. **Read** `ai_working/<feature>-<date>/03-test-plan.md`
+   - All test files created
+   - Test categories (new feature vs regression)
+
+4. **Read** `ai_working/<feature>-<date>/04-implementation.md`
+   - Implementation details
+   - What was built
+
+**After reading, extract:**
+- Test file paths (from 03-test-plan.md)
+- Test commands (from 00-discovery.md)
+- Requirements to verify (from 01-requirements.md)
+
+**Verify test files exist:**
 ```bash
-[test command]
+# Check each test file from test plan exists
+ls -la [test files listed in 03-test-plan.md]
 ```
 
-Must see: All tests PASSING. If any fail, fix them before refactoring.
+**If ANY test files NOT found:**
+
+❌ **FAIL the phase immediately - do NOT proceed:**
+```
+Cannot find test files - Phase 5 cannot proceed!
+
+Expected test files from 03-test-plan.md:
+- [file path] ❌ NOT FOUND
+- [file path] ❌ NOT FOUND
+
+This phase REQUIRES tests to verify refactoring doesn't break anything.
+
+Investigate:
+1. Check 03-test-plan.md for created test files
+2. Check if files were deleted
+3. Check if files are in different location
+
+Cannot proceed until all tests are located.
+```
+
+**Do NOT say "review passed" if tests can't be found.**
+
+**Run tests using commands from discovery:**
+```bash
+# Use actual test commands from 00-discovery.md
+[unit test command from discovery]
+[integration test command from discovery]
+[e2e test command from discovery]
+```
+
+Must see: All tests PASSING. If any fail or not found, STOP and fix.
 
 ### Step 2: Comprehensive Review (REQUIRED AGENT)
 

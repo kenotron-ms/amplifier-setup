@@ -109,31 +109,15 @@ Confirm all automated tests pass and generate manual test plan for user.
 Update TodoWrite:
 
 ```markdown
-- [ ] All automated tests verified passing
-- [ ] Test coverage verified
 - [ ] Manual test plan generated
 - [ ] User manual testing complete
 - [ ] Issues fixed (if any)
 - [ ] Acceptance criteria verified
 ```
 
-### Step 1: Verify All Automated Tests (REQUIRED)
+**Note**: Automated tests already verified GREEN in Phase 5. This phase focuses on user manual testing.
 
-**REQUIRED**: Run complete test suite and verify 100% passing.
-
-```bash
-[test command with coverage]  # e.g., pytest --cov=src --cov-report=term-missing -v
-```
-
-**Must see:**
-- [ ] All unit tests PASSING
-- [ ] All integration tests PASSING
-- [ ] All e2e tests PASSING
-- [ ] Coverage targets met (60/30/10 split)
-
-If any tests fail, STOP and fix before proceeding.
-
-### Step 2: Generate Manual Test Plan (FOLLOW TEMPLATE ABOVE)
+### Step 1: Generate Manual Test Plan (FOLLOW TEMPLATE ABOVE)
 
 **REQUIRED**: Create manual test plan for user.
 
@@ -145,14 +129,14 @@ If any tests fail, STOP and fix before proceeding.
    - Expected outcomes
    - Acceptance criteria mapping
 
-### Step 3: Update Progress to Pending Approval
+### Step 2: Update Progress to Pending Approval
 
 Update `progress.md` to mark Phase 6 as PENDING APPROVAL:
 ```markdown
 6. [⏸] Phase 6: Verification - PENDING APPROVAL (awaiting user manual testing)
 ```
 
-### Step 4: Present Manual Test Plan and WAIT
+### Step 3: Present Manual Test Plan and WAIT
 
 Inform user:
 
@@ -173,7 +157,7 @@ Your choice: _
 
 **WAIT for user to complete manual testing.**
 
-### Step 5: Address Issues (If Reported)
+### Step 4: Address Issues (If Reported)
 
 If user reports issues (option 2):
 1. Analyze the problem
@@ -181,15 +165,13 @@ If user reports issues (option 2):
 3. Fix the issue
 4. Verify all tests still pass
 5. Ask user to retest
-6. Return to Step 4 (WAIT for user)
+6. Return to Step 3 (WAIT for user)
 
 Iterate until user approves (option 1).
 
-### Step 6: After User Approval
+### Step 5: After User Approval
 
 **ONLY after user confirms feature works (option 1):**
-
-Verify all acceptance criteria from Phase 1 are met.
 
 Update `progress.md`:
 ```markdown
@@ -201,7 +183,7 @@ Update completion: `85%`
 
 Then suggest:
 ```
-✓ Phase 6 approved! Feature verified working.
+✓ Phase 6 approved! Feature verified working by user.
 
 Next: /new-feature:7-document
 ```
