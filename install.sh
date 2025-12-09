@@ -156,8 +156,6 @@ echo ""
 # INSTALL: amp command
 # =============================================================================
 
-set -e
-
 # Check for update mode (skip shell RC modifications)
 UPDATE_MODE=false
 if [[ "${1:-}" == "--update" ]]; then
