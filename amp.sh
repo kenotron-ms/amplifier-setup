@@ -45,6 +45,7 @@ AMP_UPDATE_ASYNC="${AMP_UPDATE_ASYNC:-true}"  # Background updates by default
 AMP_READY_FLAG="$AMP_HOME/.amp_ready"
 AMP_LAST_CHECK="$AMP_HOME/.amp_last_check"
 AMP_LOG="$AMP_HOME/.amp.log"
+AMP_MIGRATED_FLAG="$AMP_HOME/.amp_migrated"  # Tracks if branch migration completed
 
 # ============================================================================
 # Logging
@@ -254,6 +255,14 @@ _amp_check_prereqs() {
 
 _amp_migrate_branch() {
     # Migrate from old main branch to new amplifier-claude branch
+    # Skip if already migrated (unless --force flag is passed)
+    local force_migrate="${1:-false}"
+
+    if [[ -f "$AMP_MIGRATED_FLAG" ]] && [[ "$force_migrate" != "true" ]]; then
+        _amp_log "Migration already completed, skipping"
+        return 0
+    fi
+
     local current_dir
     current_dir=$(pwd)
 
@@ -273,30 +282,27 @@ _amp_migrate_branch() {
         ahead=$(git rev-list --count origin/$AMP_BRANCH..HEAD 2>/dev/null || echo "0")
 
         if [[ "$ahead" -gt 0 ]] && [[ "$behind" -gt 0 ]]; then
-            echo "⚠️  Your $AMP_BRANCH branch has diverged from upstream (ahead: $ahead, behind: $behind)"
-            echo "🔄 Resetting to origin/$AMP_BRANCH to ensure clean state..."
-            _amp_log "Branch diverged, resetting to origin/$AMP_BRANCH"
+            _amp_log "Branch diverged (ahead: $ahead, behind: $behind), resetting to origin/$AMP_BRANCH"
 
             if git reset --hard "origin/$AMP_BRANCH" 2>/dev/null; then
-                echo "✅ Reset to upstream $AMP_BRANCH"
+                _amp_log "Reset to upstream $AMP_BRANCH"
                 _amp_migrate_workspaces
             else
-                echo "⚠️  Warning: Could not reset to origin/$AMP_BRANCH"
                 _amp_log "Warning: Failed to reset during divergence fix"
             fi
         fi
 
         cd "$current_dir"
+        # Mark as migrated if we're on the right branch
+        touch "$AMP_MIGRATED_FLAG"
         return 0
     fi
 
     if [[ "$current_branch" == "main" ]] && [[ "$AMP_BRANCH" != "main" ]]; then
-        echo "🔄 Migrating from main branch to $AMP_BRANCH..."
         _amp_log "Detected main branch, migrating to $AMP_BRANCH"
 
         # Fetch the new branch
         if ! git fetch origin "$AMP_BRANCH" 2>/dev/null; then
-            echo "⚠️  Warning: Could not fetch $AMP_BRANCH branch"
             _amp_log "Warning: Failed to fetch $AMP_BRANCH during migration"
             cd "$current_dir"
             return 0
@@ -306,7 +312,6 @@ _amp_migrate_branch() {
         if git show-ref --verify --quiet "refs/heads/$AMP_BRANCH"; then
             # Local branch exists - switch to it
             if ! git checkout "$AMP_BRANCH" 2>/dev/null; then
-                echo "⚠️  Warning: Could not switch to existing $AMP_BRANCH branch"
                 _amp_log "Warning: Failed to checkout existing $AMP_BRANCH during migration"
                 cd "$current_dir"
                 return 0
@@ -321,38 +326,35 @@ _amp_migrate_branch() {
             ahead=$(git rev-list --count origin/$AMP_BRANCH..HEAD 2>/dev/null || echo "0")
 
             if [[ "$ahead" -gt 0 ]] || [[ "$behind" -gt 0 ]]; then
-                echo "⚠️  Local and remote $AMP_BRANCH have diverged (ahead: $ahead, behind: $behind)"
-                echo "🔄 Resetting to origin/$AMP_BRANCH to ensure clean state..."
-                _amp_log "Branch diverged, resetting to origin/$AMP_BRANCH"
+                _amp_log "Branch diverged (ahead: $ahead, behind: $behind), resetting to origin/$AMP_BRANCH"
 
                 if ! git reset --hard "origin/$AMP_BRANCH" 2>/dev/null; then
-                    echo "⚠️  Warning: Could not reset to origin/$AMP_BRANCH"
                     _amp_log "Warning: Failed to reset during migration"
                 fi
             fi
         else
             # Local branch doesn't exist - create it from remote
             if ! git checkout -b "$AMP_BRANCH" "origin/$AMP_BRANCH" 2>/dev/null; then
-                echo "⚠️  Warning: Could not create $AMP_BRANCH branch"
                 _amp_log "Warning: Failed to create $AMP_BRANCH during migration"
                 cd "$current_dir"
                 return 0
             fi
         fi
 
-        echo "✅ Migrated to $AMP_BRANCH branch"
         _amp_log "Successfully migrated to $AMP_BRANCH"
 
         # Migrate all workspace branches
         _amp_migrate_workspaces
+
+        # Mark as migrated
+        touch "$AMP_MIGRATED_FLAG"
     fi
 
     cd "$current_dir"
 }
 
 _amp_migrate_workspaces() {
-    # Migrate all workspace branches to track amplifier-claude
-    echo "🔄 Migrating workspace branches..."
+    # Migrate all workspace branches to track amplifier-claude (quiet mode)
     _amp_log "Migrating workspace branches to track $AMP_BRANCH"
 
     local workspace_branches
@@ -366,7 +368,7 @@ _amp_migrate_workspaces() {
     local count=0
     while IFS= read -r branch; do
         if [[ -n "$branch" ]]; then
-            # Update the upstream for each workspace branch
+            # Update the upstream for each workspace branch (silent)
             if git branch --set-upstream-to="origin/$AMP_BRANCH" "$branch" 2>/dev/null; then
                 ((count++))
                 _amp_log "Migrated workspace branch: $branch"
@@ -374,7 +376,6 @@ _amp_migrate_workspaces() {
         fi
     done <<< "$workspace_branches"
 
-    echo "✅ Migrated $count workspace branches"
     _amp_log "Migrated $count workspace branches"
 }
 
@@ -414,11 +415,6 @@ _amp_clone() {
 _amp_update() {
     local current_time
     current_time=$(date +%s)
-
-    # Migrate from main to amplifier-claude if needed
-    if [[ -d "$AMP_AMPLIFIER_DIR" ]]; then
-        _amp_migrate_branch
-    fi
 
     # Check if update check is needed based on mode
     if [[ "$AMP_UPDATE_MODE" == "off" ]]; then
@@ -591,11 +587,8 @@ _amp_bootstrap() {
     if [[ ! -d "$AMP_AMPLIFIER_DIR" ]]; then
         _amp_clone || return 1
     else
-        echo "📦 Amplifier already exists, checking for branch migration..."
+        echo "📦 Amplifier already exists, fetching latest..."
         _amp_log "Updating existing amplifier installation"
-
-        # Migrate from main to amplifier-claude if needed
-        _amp_migrate_branch
 
         pushd "$AMP_AMPLIFIER_DIR" > /dev/null || {
             _amp_error "Failed to change to amplifier directory" \
@@ -839,8 +832,11 @@ amp() {
 
             pushd "$AMP_AMPLIFIER_DIR" > /dev/null || return 1
 
+            # Perform branch migration if needed (only during explicit update)
+            _amp_migrate_branch
+
             # Parallel fetch
-            if ! git fetch origin main --quiet 2>&1; then
+            if ! git fetch origin "$AMP_BRANCH" --quiet 2>&1; then
                 echo "❌ Error: Failed to fetch updates"
                 popd > /dev/null
                 return 1
@@ -849,25 +845,25 @@ amp() {
             local local_sha
             local remote_sha
             local_sha=$(git rev-parse --short=7 HEAD)
-            remote_sha=$(git rev-parse --short=7 origin/main)
+            remote_sha=$(git rev-parse --short=7 "origin/$AMP_BRANCH")
 
             if [[ "$local_sha" != "$remote_sha" ]]; then
                 # Check if dependency files changed
                 local changed_files
-                changed_files=$(git diff --name-only HEAD origin/main)
+                changed_files=$(git diff --name-only HEAD "origin/$AMP_BRANCH")
                 local needs_install=false
 
                 if echo "$changed_files" | grep -qE "pyproject.toml|uv.lock|Makefile"; then
                     needs_install=true
                 fi
 
-                if ! git pull origin main --quiet 2>&1; then
+                if ! git pull origin "$AMP_BRANCH" --quiet 2>&1; then
                     # Check if this is an unrelated histories error
-                    if git pull origin main --quiet 2>&1 | grep -q "refusing to merge unrelated histories"; then
-                        echo "   ⚠️  Detected diverged histories, resetting to origin/main..."
+                    if git pull origin "$AMP_BRANCH" --quiet 2>&1 | grep -q "refusing to merge unrelated histories"; then
+                        echo "   ⚠️  Detected diverged histories, resetting to origin/$AMP_BRANCH..."
                         _amp_log "Git histories diverged, performing hard reset"
-                        if ! git reset --hard origin/main; then
-                            echo "❌ Error: Failed to reset to origin/main"
+                        if ! git reset --hard "origin/$AMP_BRANCH"; then
+                            echo "❌ Error: Failed to reset to origin/$AMP_BRANCH"
                             popd > /dev/null
                             return 1
                         fi
