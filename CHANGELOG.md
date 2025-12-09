@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Full PR lifecycle automation in `/submit-pr`**: The git plugin now automates the complete pull request workflow from start to finish
+  - **Auto-branch creation**: Automatically creates a feature branch when you're on main/master, so you never accidentally commit to your base branch
+  - **Real-time PR monitoring**: Watches your PR's CI/CD checks and approval status, showing live updates as they happen
+  - **Auto-merge on approval**: When your PR is approved and all checks pass, it automatically merges and cleans up branches for you
+  - Complete hands-off workflow: Create branch → Commit → Ensure compliance → Monitor checks → Merge → Cleanup
+
 ### Fixed
 
 - **Workspace creation failure in new directories**: Fixed issue where `amp` would fail with "Failed to create/access workspace worktree" when run in a blank folder. The marketplace configuration output was contaminating stdout, causing the directory check to fail. Output is now correctly redirected to stderr.

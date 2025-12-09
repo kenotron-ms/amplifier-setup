@@ -59,18 +59,32 @@ This will:
 /submit-pr
 ```
 
-This will:
-- Check your git state
-- Commit any uncommitted changes (with your approval)
-- **Ensure documentation compliance (automatic)**:
-  - Discover repository documentation standards
-  - Update all required documentation based on code changes
-  - Run required checks (linting, testing, type checking)
-  - Generate/update auto-generated files
-  - Block PR submission if compliance fails
-- Push your branch to remote
-- Discover repository PR standards from docs and recent PRs
-- Create a pull request using `gh` CLI following discovered conventions
+This automates the complete PR workflow from start to finish:
+
+**Smart branch handling:**
+- Automatically creates a feature branch if you're on main/master
+- Prevents accidental commits to base branch
+
+**Automatic commits and compliance:**
+- Commits any uncommitted changes with smart commit messages
+- **Ensures documentation compliance (automatic)**:
+  - Discovers repository documentation standards
+  - Updates all required documentation based on code changes
+  - Runs required checks (linting, testing, type checking)
+  - Generates/updates auto-generated files
+  - Blocks PR submission if compliance fails
+
+**PR creation and monitoring:**
+- Pushes your branch to remote
+- Creates pull request following repository conventions
+- **Monitors CI/CD checks in real-time** (optional)
+- Shows live status updates for checks and approvals
+
+**Auto-merge and cleanup:**
+- When approved and checks pass, automatically merges PR
+- Deletes remote and local feature branches
+- Switches back to base branch with latest changes
+- Complete hands-off workflow
 
 ## Requirements
 
