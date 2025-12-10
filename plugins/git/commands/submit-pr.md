@@ -341,12 +341,12 @@ After PR creation with auto-merge enabled, monitor the PR status by repeatedly c
 **Your mission**: Keep checking the PR status every 30 seconds until one of these conditions is met:
 
 1. **PR is merged** → Report success and proceed to Step 8 (cleanup)
-2. **PR has failed CI checks or change requests** → Proceed to Step 7a (fix issues), maximum 3 attempts
+2. **PR has failed CI checks, change requests, or merge conflicts** → Proceed to Step 7a (fix issues), maximum 3 attempts
 3. **PR is closed without merging** → Report failure and exit
 
 **How to monitor**:
 
-1. Use `gh pr view [PR_NUMBER] --json state,statusCheckRollup,reviewDecision` to check status
+1. Use `gh pr view [PR_NUMBER] --json state,statusCheckRollup,reviewDecision,mergeable` to check status
 2. Display the current status clearly when it changes (not every check)
 3. Wait 30 seconds using Bash `sleep 30` command
 4. Repeat until one of the exit conditions is met
@@ -356,13 +356,14 @@ After PR creation with auto-merge enabled, monitor the PR status by repeatedly c
 - PR state (OPEN/MERGED/CLOSED)
 - Review status (PENDING/APPROVED/CHANGES_REQUESTED)
 - CI/CD check results (SUCCESS/PENDING/FAILURE)
-- What we're waiting for (approval, checks, or ready to merge)
+- Merge conflicts status (mergeable field: MERGEABLE/CONFLICTING/UNKNOWN)
+- What we're waiting for (approval, checks, conflict resolution, or ready to merge)
 
 **Exit conditions**:
 - ✅ **MERGED**: PR successfully merged → go to Step 8
-- ⚠️  **Failed checks or changes requested**: → go to Step 7a (up to 3 times)
+- ⚠️  **Failed checks, changes requested, or conflicts**: → go to Step 7a (up to 3 times)
 - ❌ **CLOSED**: PR closed without merging → exit with error
-- 🎉 **APPROVED + all checks passed**: GitHub auto-merge will complete → go to Step 8
+- 🎉 **APPROVED + all checks passed + no conflicts**: GitHub auto-merge will complete → go to Step 8
 
 ### Step 7a: Autonomously Address PR Issues
 
@@ -390,14 +391,25 @@ CI/CD CHECK FAILURES:
 REVIEW CHANGE REQUESTS:
 {List all review comments requesting changes with reviewer name and feedback}
 
+MERGE CONFLICTS:
+{If mergeable status is CONFLICTING, note that conflicts exist}
+
 YOUR MISSION:
 
 1. **Analyze what failed and why:**
    - Read CI/CD logs from failed check URLs
    - Read review comments to understand requested changes
-   - Identify root causes of failures
+   - Check if merge conflicts exist (mergeable: CONFLICTING)
+   - Identify root causes of all failures
 
 2. **Fix all issues automatically:**
+
+   **For merge conflicts:**
+   - Pull latest changes from base branch: `git fetch origin && git merge origin/main` (or master)
+   - Resolve conflicts intelligently by analyzing both versions
+   - Keep changes from this PR while integrating base branch updates
+   - Test that resolved code still works correctly
+   - Mark conflicts as resolved
 
    **For CI check failures:**
    - If linting failures: Run linter and fix all issues
@@ -434,6 +446,11 @@ Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.co
 5. **Report status in this EXACT format:**
    ```
    FIX STATUS: [COMPLETE|FAILED]
+
+   MERGE CONFLICTS RESOLVED:
+   - Status: ✅ Resolved | ⊘ No conflicts | ❌ Could not resolve
+     Files: {list of conflicted files}
+     Resolution: {brief description of how conflicts were resolved}
 
    CI CHECKS ADDRESSED:
    - Check: {check name}
