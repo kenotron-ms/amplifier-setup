@@ -11,7 +11,8 @@ Complete end-to-end PR workflow: automatically creates branches, commits changes
 **✨ Full Lifecycle Automation**:
 - **Auto-branch**: Creates feature branch if on main/master
 - **Auto-monitor**: Watches PR checks and approval status in real-time
-- **Auto-merge**: Merges and cleans up branches when ready
+- **Smart merge**: Uses GitHub auto-merge when available, otherwise merges manually when checks pass
+- **Auto-cleanup**: Cleans up branches after merge completes
 
 ## Important: Project Directory
 
@@ -307,21 +308,26 @@ Before creating the PR, discover repository-specific PR title and description st
      - Test plan or verification steps
      - Any other required content
    - Maintain the tone and style consistent with the repo's standards
-   - Create the PR and **immediately enable auto-merge**:
+   - Create the PR and **attempt to enable auto-merge**:
      ```bash
      # Create PR
      gh pr create --title "PR_TITLE" --body "PR_BODY"
 
-     # Enable auto-merge immediately (GitHub will merge when checks pass + approved)
+     # Try to enable auto-merge (may fail if not enabled in repo)
      PR_NUMBER=$(gh pr view --json number -q .number)
-     gh pr merge "$PR_NUMBER" --auto --merge
+     AUTO_MERGE_ENABLED=false
 
-     if [[ $? -eq 0 ]]; then
+     if gh pr merge "$PR_NUMBER" --auto --merge 2>/dev/null; then
        echo "✅ Auto-merge enabled - PR will merge automatically when approved and checks pass"
+       AUTO_MERGE_ENABLED=true
      else
-       echo "⚠️  Could not enable auto-merge (may require repository permissions)"
-       echo "   Will monitor and merge manually instead"
+       echo "⚠️  Auto-merge not available in this repository"
+       echo "   Will monitor checks and merge manually when ready"
+       AUTO_MERGE_ENABLED=false
      fi
+
+     # Store auto-merge status for later steps
+     export AUTO_MERGE_ENABLED
      ```
 
 3. If PR exists, check if auto-merge is already enabled, enable it if not:
@@ -363,7 +369,9 @@ After PR creation with auto-merge enabled, monitor the PR status by repeatedly c
 - ✅ **MERGED**: PR successfully merged → go to Step 8
 - ⚠️  **Failed checks, changes requested, or conflicts**: → go to Step 7a (up to 3 times)
 - ❌ **CLOSED**: PR closed without merging → exit with error
-- 🎉 **APPROVED + all checks passed + no conflicts**: GitHub auto-merge will complete → go to Step 8
+- 🎉 **All checks passed + no conflicts**:
+  - If `AUTO_MERGE_ENABLED=true`: Wait for GitHub auto-merge → go to Step 8
+  - If `AUTO_MERGE_ENABLED=false`: Merge manually → go to Step 7b
 
 ### Step 7a: Autonomously Address PR Issues
 
@@ -506,16 +514,35 @@ fi
 **After fixes are pushed, automatically return to Step 7** to continue monitoring. This creates an autonomous loop:
 - Monitor → Detect issues → Fix issues → Push → Monitor → Detect passing → Merge
 
-### Step 8: Wait for Auto-Merge and Cleanup
+### Step 7b: Manual Merge When Checks Pass
 
-**This step runs when Step 7 detects the PR is ready to merge (approved + checks passed)**
+**This step only runs if auto-merge is not enabled/available AND all checks have passed**
 
-Since auto-merge is enabled, GitHub will automatically complete the merge. Once merged, clean up the local workspace:
+When auto-merge is not available in the repository but all checks are green and there are no conflicts:
 
-**Wait for GitHub auto-merge**:
-1. Poll every 10 seconds using `gh pr view [PR_NUMBER] --json state`
-2. When state becomes "MERGED" → proceed to cleanup
-3. If state becomes "CLOSED" → exit with error (merged without PR)
+1. **Verify the PR is ready to merge**: Check one final time that all status checks show SUCCESS and the PR is mergeable
+
+2. **Merge the PR**: Use the gh CLI to merge the PR and delete the remote branch
+
+3. **Report success**: Confirm the PR was merged and the branch was deleted
+
+4. **If merge fails**: Report the error and provide the PR URL for manual intervention
+
+After successful merge, proceed to Step 8 for cleanup.
+
+### Step 8: Cleanup After Merge
+
+**This step runs after the PR has been merged (either via GitHub auto-merge or manual merge in Step 7b)**
+
+Once the PR is confirmed as merged, clean up the local workspace:
+
+**If auto-merge was enabled (coming from Step 7 monitoring)**:
+1. Wait for GitHub to complete the auto-merge by polling the PR state
+2. When state becomes "MERGED" → proceed to cleanup below
+3. If state becomes "CLOSED" → exit with error
+
+**If manual merge was performed (coming from Step 7b)**:
+- Skip waiting, PR is already merged → proceed directly to cleanup below
 
 **Cleanup local branches**:
 1. Get the base branch name (main/master) from the PR
@@ -549,10 +576,10 @@ Show the user:
 
 - **FULLY AUTONOMOUS**: Zero user prompts or confirmations required
 - **Automatic branch creation**: If on main/master, automatically creates a feature branch
-- **GitHub auto-merge**: Enables auto-merge on PR creation - GitHub merges when ready
-- **Continuous monitoring**: Polls PR status every 30 seconds using `sleep` + `gh pr view`
+- **Smart merging strategy**: Attempts to enable auto-merge, but if not available, monitors and merges manually when checks pass
+- **Continuous monitoring**: Polls PR status every 30 seconds to detect when checks complete
 - **Autonomous issue fixing**: When CI fails or changes are requested, automatically fixes and re-pushes
-- **Fix-verify-merge loop**: Continuously monitors → fixes issues → verifies → GitHub auto-merges
+- **Fix-verify-merge loop**: Continuously monitors → fixes issues → verifies → merges (auto or manual)
 - **Maximum 3 retry attempts**: If issues can't be fixed after 3 tries, exits with error
 - Never force push without explicit user confirmation
 - All actions are automatic - no user confirmation needed for commits, PR creation, monitoring, or merging
