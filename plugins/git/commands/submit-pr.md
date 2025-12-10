@@ -307,150 +307,226 @@ Before creating the PR, discover repository-specific PR title and description st
      - Test plan or verification steps
      - Any other required content
    - Maintain the tone and style consistent with the repo's standards
-   - Create the PR immediately (no confirmation needed):
+   - Create the PR and **immediately enable auto-merge**:
      ```bash
+     # Create PR
      gh pr create --title "PR_TITLE" --body "PR_BODY"
+
+     # Enable auto-merge immediately (GitHub will merge when checks pass + approved)
+     PR_NUMBER=$(gh pr view --json number -q .number)
+     gh pr merge "$PR_NUMBER" --auto --merge
+
+     if [[ $? -eq 0 ]]; then
+       echo "✅ Auto-merge enabled - PR will merge automatically when approved and checks pass"
+     else
+       echo "⚠️  Could not enable auto-merge (may require repository permissions)"
+       echo "   Will monitor and merge manually instead"
+     fi
      ```
 
-3. If PR exists, report the existing PR URL
+3. If PR exists, check if auto-merge is already enabled, enable it if not:
+   ```bash
+   AUTO_MERGE=$(gh pr view --json autoMergeRequest -q .autoMergeRequest)
+   if [[ "$AUTO_MERGE" == "null" ]]; then
+     gh pr merge --auto --merge 2>/dev/null && echo "✅ Auto-merge enabled"
+   fi
+   ```
 
-### Step 7: Monitor PR Gates and Status
+### Step 7: Monitor PR Status Until Ready or Issues Detected
 
-After PR creation, ask the user if they want to monitor and auto-merge:
+**FULLY AUTONOMOUS - NO USER PROMPTS**
 
-```bash
-cd "$PROJECT_DIR"
+After PR creation with auto-merge enabled, monitor the PR status by repeatedly checking and waiting:
 
-PR_NUMBER=$(gh pr view --json number -q .number)
-PR_URL=$(gh pr view --json url -q .url)
+**Your mission**: Keep checking the PR status every 30 seconds until one of these conditions is met:
 
-echo ""
-echo "✅ PR created: $PR_URL"
-echo ""
-echo "Would you like to:"
-echo "1. Monitor PR checks and auto-merge when approved (recommended)"
-echo "2. Exit now and manage PR manually"
-echo ""
-read -p "Enter choice (1 or 2): " CHOICE
+1. **PR is merged** → Report success and proceed to Step 8 (cleanup)
+2. **PR has failed CI checks, change requests, or merge conflicts** → Proceed to Step 7a (fix issues), maximum 3 attempts
+3. **PR is closed without merging** → Report failure and exit
 
-if [[ "$CHOICE" != "1" ]]; then
-  echo "PR submitted successfully. You can manage it manually at: $PR_URL"
-  exit 0
-fi
+**How to monitor**:
 
-echo ""
-echo "🔍 Monitoring PR status and checks..."
-echo ""
+1. Use `gh pr view [PR_NUMBER] --json state,statusCheckRollup,reviewDecision,mergeable` to check status
+2. Display the current status clearly when it changes (not every check)
+3. Wait 30 seconds using Bash `sleep 30` command
+4. Repeat until one of the exit conditions is met
 
-# Show initial status
-gh pr view --json statusCheckRollup,reviewDecision -q '.statusCheckRollup[] | "  [\(.state)] \(.context)"'
+**What to report**:
+- Current timestamp
+- PR state (OPEN/MERGED/CLOSED)
+- Review status (PENDING/APPROVED/CHANGES_REQUESTED)
+- CI/CD check results (SUCCESS/PENDING/FAILURE)
+- Merge conflicts status (mergeable field: MERGEABLE/CONFLICTING/UNKNOWN)
+- What we're waiting for (approval, checks, conflict resolution, or ready to merge)
 
-echo ""
-echo "Watching for updates... (Press Ctrl+C to stop and exit)"
-echo ""
+**Exit conditions**:
+- ✅ **MERGED**: PR successfully merged → go to Step 8
+- ⚠️  **Failed checks, changes requested, or conflicts**: → go to Step 7a (up to 3 times)
+- ❌ **CLOSED**: PR closed without merging → exit with error
+- 🎉 **APPROVED + all checks passed + no conflicts**: GitHub auto-merge will complete → go to Step 8
 
-# Monitor checks in a loop
-PREV_STATE=""
-while true; do
-  # Get current status
-  STATUS=$(gh pr view "$PR_NUMBER" --json statusCheckRollup,reviewDecision,state)
+### Step 7a: Autonomously Address PR Issues
 
-  # Extract check states
-  CHECKS_STATE=$(echo "$STATUS" | jq -r '.statusCheckRollup[]? | "\(.state)|\(.context)"')
-  REVIEW_STATE=$(echo "$STATUS" | jq -r '.reviewDecision // "PENDING"')
-  PR_STATE=$(echo "$STATUS" | jq -r '.state')
+**This step only runs if failures or change requests were detected in Step 7**
 
-  CURRENT_STATE="$CHECKS_STATE|$REVIEW_STATE|$PR_STATE"
+When issues are detected, use the Task tool to delegate fixing them:
 
-  # Only show update if state changed
-  if [[ "$CURRENT_STATE" != "$PREV_STATE" ]]; then
-    echo "$(date '+%H:%M:%S') - Status Update:"
+**Use Task tool with `subagent_type: 'general-purpose'`**
 
-    # Show check statuses
-    echo "$CHECKS_STATE" | while IFS='|' read -r state context; do
-      case "$state" in
-        SUCCESS) echo "  ✅ $context" ;;
-        FAILURE) echo "  ❌ $context" ;;
-        PENDING) echo "  ⏳ $context" ;;
-        *) echo "  ⚪ $context ($state)" ;;
-      esac
-    done
+**Provide this detailed prompt:**
 
-    # Show review status
-    case "$REVIEW_STATE" in
-      APPROVED) echo "  ✅ PR Approved" ;;
-      CHANGES_REQUESTED) echo "  🔄 Changes Requested" ;;
-      PENDING) echo "  ⏳ Awaiting Review" ;;
-    esac
+```
+TASK: Autonomously fix PR issues to enable merge
 
-    # Check if PR is ready to merge
-    if [[ "$REVIEW_STATE" == "APPROVED" ]]; then
-      ALL_CHECKS_PASSED=true
-      echo "$CHECKS_STATE" | while IFS='|' read -r state context; do
-        if [[ "$state" != "SUCCESS" && -n "$state" ]]; then
-          ALL_CHECKS_PASSED=false
-          break
-        fi
-      done
+PR CONTEXT:
+- PR Number: {PR_NUMBER}
+- PR URL: {PR_URL}
+- Current branch: {output of: git branch --show-current}
 
-      if [[ "$ALL_CHECKS_PASSED" == "true" ]]; then
-        echo ""
-        echo "🎉 PR is approved and all checks passed!"
-        echo "Ready to proceed to merge..."
-        break
-      fi
-    fi
+DETECTED ISSUES:
 
-    PREV_STATE="$CURRENT_STATE"
-  fi
+CI/CD CHECK FAILURES:
+{List all failed checks with their context and URLs from Step 7}
 
-  # If PR is closed/merged, stop monitoring
-  if [[ "$PR_STATE" == "MERGED" || "$PR_STATE" == "CLOSED" ]]; then
-    echo "PR state: $PR_STATE"
-    break
-  fi
+REVIEW CHANGE REQUESTS:
+{List all review comments requesting changes with reviewer name and feedback}
 
-  sleep 10  # Check every 10 seconds
-done
+MERGE CONFLICTS:
+{If mergeable status is CONFLICTING, note that conflicts exist}
+
+YOUR MISSION:
+
+1. **Analyze what failed and why:**
+   - Read CI/CD logs from failed check URLs
+   - Read review comments to understand requested changes
+   - Check if merge conflicts exist (mergeable: CONFLICTING)
+   - Identify root causes of all failures
+
+2. **Fix all issues automatically:**
+
+   **For merge conflicts:**
+   - Pull latest changes from base branch: `git fetch origin && git merge origin/main` (or master)
+   - Resolve conflicts intelligently by analyzing both versions
+   - Keep changes from this PR while integrating base branch updates
+   - Test that resolved code still works correctly
+   - Mark conflicts as resolved
+
+   **For CI check failures:**
+   - If linting failures: Run linter and fix all issues
+   - If test failures: Fix failing tests or the code causing failures
+   - If type errors: Fix all type issues
+   - If build failures: Fix build errors
+   - Run `make check` or equivalent to verify fixes
+
+   **For review change requests:**
+   - Read each comment carefully
+   - Implement the requested changes
+   - Address all reviewer feedback
+   - Ensure changes match reviewer expectations
+
+3. **Commit fixes:**
+   ```bash
+   cd "$PROJECT_DIR"
+   git add -A
+   git commit -m "fix: address PR feedback and CI failures
+
+- Fixed {list what was fixed}
+- Addressed reviewer feedback from {reviewer names}
+
+🤖 Generated with [Amplifier](https://github.com/microsoft/amplifier)
+
+Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.com>"
+   ```
+
+4. **Push fixes:**
+   ```bash
+   git push origin $(git branch --show-current)
+   ```
+
+5. **Report status in this EXACT format:**
+   ```
+   FIX STATUS: [COMPLETE|FAILED]
+
+   MERGE CONFLICTS RESOLVED:
+   - Status: ✅ Resolved | ⊘ No conflicts | ❌ Could not resolve
+     Files: {list of conflicted files}
+     Resolution: {brief description of how conflicts were resolved}
+
+   CI CHECKS ADDRESSED:
+   - Check: {check name}
+     Status: ✅ Fixed | ❌ Could not fix
+     Changes: {what was done to fix it}
+
+   REVIEW FEEDBACK ADDRESSED:
+   - Reviewer: {name}
+     Status: ✅ Addressed | ❌ Could not address
+     Changes: {what was done}
+
+   COMMITS CREATED: {number}
+   CHANGES PUSHED: [Yes|No]
+
+   FAILURES: [Only if FIX STATUS is FAILED]
+   - What could not be fixed
+   - Why it could not be fixed
+   - What human intervention is needed
+   ```
+
+CRITICAL RULES:
+- Be thorough - fix everything you can
+- Be accurate - ensure fixes actually resolve the issues
+- Test your fixes - run checks before committing
+- Commit and push immediately - don't wait
+- NO ASKING - just fix everything automatically
 ```
 
-### Step 8: Auto-Merge and Cleanup
-
-Once the PR is approved and all checks pass:
+**Process agent response:**
 
 ```bash
 cd "$PROJECT_DIR"
 
-echo ""
-echo "🔀 Merging PR #$PR_NUMBER..."
-
-# Merge the PR
-gh pr merge "$PR_NUMBER" --merge --delete-branch
-
-if [[ $? -eq 0 ]]; then
-  echo "✅ PR merged successfully!"
-
-  # Switch back to main/master
-  BASE_BRANCH=$(gh pr view "$PR_NUMBER" --json baseRefName -q .baseRefName)
-  git checkout "$BASE_BRANCH"
-
-  # Pull latest changes
-  git pull origin "$BASE_BRANCH"
-
-  # Delete local branch
-  BRANCH_NAME=$(git branch --list | grep -v "^\*" | grep -v "$BASE_BRANCH" | tail -1 | xargs)
-  if [[ -n "$BRANCH_NAME" ]]; then
-    git branch -D "$BRANCH_NAME"
-    echo "✅ Deleted local branch: $BRANCH_NAME"
-  fi
-
+# Extract fix status from agent output
+if grep -q "FIX STATUS: COMPLETE" <<< "$AGENT_OUTPUT"; then
+  echo "✅ Issues fixed successfully by agent"
   echo ""
-  echo "🎉 Complete! You're back on $BASE_BRANCH with latest changes."
+  echo "🔄 Returning to monitoring loop..."
+  # Return to Step 7 to continue monitoring
+  # This creates a fix-verify-merge loop
 else
-  echo "❌ Merge failed. Please check the PR manually: $PR_URL"
+  echo "❌ Agent could not fix all issues"
+  echo ""
+  echo "Issues that could not be fixed automatically:"
+  grep -A 100 "FAILURES:" <<< "$AGENT_OUTPUT"
+  echo ""
+  echo "PR URL: $PR_URL"
+  echo "Please fix these issues manually and push to continue"
   exit 1
 fi
 ```
+
+**After fixes are pushed, automatically return to Step 7** to continue monitoring. This creates an autonomous loop:
+- Monitor → Detect issues → Fix issues → Push → Monitor → Detect passing → Merge
+
+### Step 8: Wait for Auto-Merge and Cleanup
+
+**This step runs when Step 7 detects the PR is ready to merge (approved + checks passed)**
+
+Since auto-merge is enabled, GitHub will automatically complete the merge. Once merged, clean up the local workspace:
+
+**Wait for GitHub auto-merge**:
+1. Poll every 10 seconds using `gh pr view [PR_NUMBER] --json state`
+2. When state becomes "MERGED" → proceed to cleanup
+3. If state becomes "CLOSED" → exit with error (merged without PR)
+
+**Cleanup local branches**:
+1. Get the base branch name (main/master) from the PR
+2. Switch to the base branch: `git checkout [base_branch]`
+3. Pull latest changes: `git pull origin [base_branch]`
+4. Delete the feature branch: `git branch -D [feature_branch]`
+
+**Report completion**:
+- PR URL
+- Confirmation that you're back on base branch
+- Latest changes pulled
 
 ### Step 9: Report Final Result
 
@@ -471,14 +547,18 @@ Show the user:
 
 ## Important Notes
 
+- **FULLY AUTONOMOUS**: Zero user prompts or confirmations required
 - **Automatic branch creation**: If on main/master, automatically creates a feature branch
-- **Automatic PR monitoring**: Watches CI/CD checks and approval status in real-time
-- **Automatic merge**: When approved and checks pass, merges PR and cleans up branches
+- **GitHub auto-merge**: Enables auto-merge on PR creation - GitHub merges when ready
+- **Continuous monitoring**: Polls PR status every 30 seconds using `sleep` + `gh pr view`
+- **Autonomous issue fixing**: When CI fails or changes are requested, automatically fixes and re-pushes
+- **Fix-verify-merge loop**: Continuously monitors → fixes issues → verifies → GitHub auto-merges
+- **Maximum 3 retry attempts**: If issues can't be fixed after 3 tries, exits with error
 - Never force push without explicit user confirmation
-- All actions are automatic - no user confirmation needed for commits or PR creation
+- All actions are automatic - no user confirmation needed for commits, PR creation, monitoring, or merging
 - Documentation compliance is AUTOMATIC - never skip it
 - If compliance fails, PR submission is blocked until fixed
-- Process is designed for speed - monitors and completes the entire PR lifecycle
+- Process is designed for complete autonomy - submit PR and walk away, it will handle everything
 
 ## Optimization
 
