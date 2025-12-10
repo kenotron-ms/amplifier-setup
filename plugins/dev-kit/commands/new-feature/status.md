@@ -70,11 +70,11 @@ Progress: 45% complete
 
 Phases:
 ✓ 0. Discovery
-✓ 1. Requirements  
+✓ 1. Requirements
 ✓ 2. Design
 ✓ 3. Test Planning
 ◐ 4. Implementation (60% - in progress)
-  Phase 5-9 pending...
+  Phase 5-8 pending...
 
 Current Task: JWT token generation (Chunk 1)
 
@@ -99,8 +99,7 @@ Available Commands:
 • /new-feature:5-refactor     - Phase 5: Refactoring
 • /new-feature:6-verify       - Phase 6: Verification
 • /new-feature:7-document     - Phase 7: Documentation
-• /new-feature:8-deploy-prep  - Phase 8: Deployment Prep
-• /new-feature:9-cleanup      - Phase 9: Cleanup (optional)
+• /new-feature:8-cleanup      - Phase 8: Cleanup
 • /new-feature:status         - Check progress
 • /new-feature                - Root orchestrator
 ```

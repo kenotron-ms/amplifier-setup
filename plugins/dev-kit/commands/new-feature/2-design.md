@@ -192,6 +192,32 @@ def function_name(input: Type) -> OutputType:
    - **Impact if wrong**: [What changes]
 
 **Review all assumptions carefully. Correcting now prevents expensive redesign later.**
+
+---
+
+## Deployment Considerations
+
+**Note**: If feature requires no special deployment, state: "No special deployment needed - standard code deployment applies."
+
+### Configuration Changes
+[Environment variables, config files that need updating]
+[If none needed, state: "No configuration changes required"]
+
+### Database Migrations
+[Migration scripts needed, if any]
+[If none needed, state: "No database changes"]
+
+### Deployment Steps
+[Any special steps beyond standard deployment]
+[If none needed, state: "Standard deployment process applies"]
+
+### Rollback Plan
+[How to rollback if issues occur]
+[Minimum: "Revert commit [hash]"]
+
+### Monitoring & Verification
+[Key metrics to watch post-deployment, verification steps]
+[If standard monitoring sufficient, state: "Standard application monitoring applies"]
 ```
 
 ---

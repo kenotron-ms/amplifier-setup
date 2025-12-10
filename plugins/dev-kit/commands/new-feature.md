@@ -29,9 +29,9 @@ Feature: $ARGUMENTS
 ## Workflow Overview
 
 ```
-Setup:  0. Discovery → 1. Requirements → 2. Design
+Setup:  0. Discovery → 1. Requirements → 2. Design 
 TDD:    3. Tests (RED) → 4. Implement (GREEN) → 5. Refactor
-Finish: 6. Verify → 7. Document → 8. Deploy Prep → 9. Cleanup
+Finish: 6. Verify → 7. Document → 8. Cleanup
 ```
 
 **Visual Grouping:**
@@ -48,7 +48,7 @@ Finish: 6. Verify → 7. Document → 8. Deploy Prep → 9. Cleanup
            ↓
 ┌─────────────────────────┐
 │ FINALIZE                │
-│ 6→7→8→9                 │
+│ 6→7→8                   │
 └─────────────────────────┘
 ```
 
@@ -68,8 +68,7 @@ Individual phase commands:
 - `/new-feature:5-refactor` - Phase 5: Refactoring (TDD REFACTOR)
 - `/new-feature:6-verify` - Phase 6: Verification
 - `/new-feature:7-document` - Phase 7: Documentation
-- `/new-feature:8-deploy-prep` - Phase 8: Deployment Prep
-- `/new-feature:9-cleanup` - Phase 9: Cleanup (optional)
+- `/new-feature:8-cleanup` - Phase 8: Cleanup (optional)
 - `/new-feature:status` - Check progress
 
 ---
@@ -224,8 +223,7 @@ ai_working/<feature-name>-YYYY-MM-DD/
 ├── 05-review.md             # Phase 5
 ├── 06-manual-test-plan.md   # Phase 6
 ├── 07-docs-checklist.md     # Phase 7
-├── 08-deployment.md         # Phase 8
-└── 09-cleanup-candidates.md # Phase 9 (optional)
+└── 08-cleanup-candidates.md # Phase 8 (optional)
 ```
 
 **Temporary**: All files in ai_working/ are temporary brainstorming/tracking documents

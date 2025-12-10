@@ -53,14 +53,18 @@ Place in repository's documentation structure (from Phase 0 discovery):
 - Phase 6 (Verification) must be complete
 - Feature must be working and tested
 - Required files:
-  - `ai_working/<feature>-<date>/06-manual-test-plan.md`
   - `ai_working/<feature>-<date>/00-discovery.md` (for doc structure)
+  - `ai_working/<feature>-<date>/01-requirements.md` (source for requirements doc)
+  - `ai_working/<feature>-<date>/02-design.md` (source for design doc)
+  - `ai_working/<feature>-<date>/03-test-plan.md` (source for test plan doc)
+  - `ai_working/<feature>-<date>/06-manual-test-plan.md`
   - `progress.md`
 
 ## Objectives
 
-- Update all relevant documentation
-- Create permanent feature documentation
+- Ensure 3 key permanent documents exist (requirements, design, test plan)
+- Update existing docs or create new following repository structure
+- Update README, API docs, user guides
 - Add usage examples
 - Update CHANGELOG
 
@@ -105,14 +109,99 @@ including overview, usage examples, API reference. Follow existing docs style."
 
 **Wait for agent to complete** if used.
 
-### Step 3: Create Permanent Feature Documentation (FOLLOW TEMPLATE ABOVE)
+### Step 3: Ensure 3 Key Permanent Documents (REQUIRED)
 
-**REQUIRED**: Create permanent documentation per repository structure (from Phase 0 discovery).
+**REQUIRED**: Ensure these 3 key documents exist in target repository.
 
-1. **Copy template structure** from TEMPLATE section above
-2. **Create** `ai_working/<feature>-<date>/07-docs-checklist.md`
-3. **Create permanent docs** in repository's documentation location (from 00-discovery.md)
-4. **Check off items** in 07-docs-checklist.md as completed
+Reference `00-discovery.md` for repository's documentation structure.
+
+#### 3a. Functional Requirements Document
+
+**Check if exists in target repository:**
+```bash
+find [docs location from 00-discovery.md] -name "*requirements*" -o -name "*[feature-name]*requirements*"
+```
+
+**If exists:**
+- Read existing document
+- Update with missing details from `ai_working/<feature>/01-requirements.md`:
+  - User stories not documented
+  - Acceptance criteria not listed
+  - Assumptions or constraints not mentioned
+- Preserve existing structure and style
+
+**If NOT exists:**
+- Determine location from 00-discovery.md
+- Create following repository's documentation pattern
+- Synthesize from `ai_working/<feature>/01-requirements.md`
+
+#### 3b. Dev Design / Architecture Document
+
+**Check if exists:**
+```bash
+find [docs location] -name "*design*" -o -name "*architecture*" -o -name "*ADR*"
+```
+
+**If exists:**
+- Read existing document
+- Update with missing details from `ai_working/<feature>/02-design.md`:
+  - Architecture diagrams not present
+  - Module design details missing
+  - Integration points not documented
+
+**If NOT exists:**
+- Check if repository uses ADRs (from 00-discovery.md)
+- Create in appropriate location
+- Synthesize from `ai_working/<feature>/02-design.md`
+- Include: Architecture overview, modules, key decisions
+
+#### 3c. Test Plan Details
+
+**REQUIRED**: Ensure test plan details are documented (adapt to repository structure).
+
+**Check repository's documentation pattern from 00-discovery.md:**
+
+**Pattern A: Combined document (design + test plan)**
+```bash
+# If repository uses single doc per feature
+# Example: docs/features/[feature-name].md contains architecture, tests
+```
+- Read existing combined document
+- Add "## Test Strategy" section if missing
+- Update with details from `ai_working/<feature>/03-test-plan.md`
+- Preserve document structure
+
+**Pattern B: Separate test plan document**
+```bash
+# If repository has dedicated test plan docs
+find [docs location] -name "*test*plan*" -o -name "*qa*"
+```
+- If exists: Read and update with missing test details
+- If NOT exists: Create separate test plan doc
+- Synthesize from `ai_working/<feature>/03-test-plan.md`
+
+**Pattern C: Test details in epic/story**
+```bash
+# If repository uses epic/story format with acceptance criteria
+find [docs location] -name "*epic*" -o -name "*story*"
+```
+- Read epic/story document
+- Update test/acceptance section
+- Add test cases from `ai_working/<feature>/03-test-plan.md`
+
+**Adapt to repository's pattern** - don't impose rigid structure.
+
+**Include from 03-test-plan.md (test cases only):**
+- Test strategy (60/30/10 split)
+- Test categories (new feature vs regression)
+- List of test cases (unit, integration, e2e)
+- Coverage targets
+
+**Do NOT include:**
+- Acceptance criteria (those are in requirements doc)
+- Traceability mapping (criteria → tests)
+
+Just document the tests themselves.
 
 ### Step 4: Update CHANGELOG
 
@@ -120,7 +209,7 @@ Add entry for this feature following repository's CHANGELOG format.
 
 ### Step 5: Create Documentation Checklist
 
-Track in `ai_working/<feature>-<date>/07-docs-checklist.md` (following template).
+Track all updates in `ai_working/<feature>-<date>/07-docs-checklist.md` (following TEMPLATE above).
 
 ### Step 6: Update Progress
 

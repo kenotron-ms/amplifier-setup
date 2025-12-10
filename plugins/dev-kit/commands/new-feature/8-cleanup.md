@@ -1,10 +1,10 @@
 ---
-description: "Phase 9: Remove unused code safely (Optional)"
+description: "Phase 8: Remove unused code safely (Optional)"
 category: development
 allowed-tools: TodoWrite, Read, Grep, Glob, Edit, Bash
 ---
 
-# New Feature - Phase 9: Cleanup (Optional)
+# New Feature - Phase 8: Cleanup (Optional)
 
 Safely remove unused code, archive temporary files, verify no breakage.
 
@@ -14,10 +14,10 @@ User must commit all changes before running cleanup.
 
 ## Prerequisites
 
-- Phase 8 (Deployment Prep) should be complete
+- Phase 7 (Documentation) should be complete
 - **CRITICAL**: User must have committed all changes
 - Required files:
-  - `ai_working/<feature>-<date>/08-deployment.md`
+  - `ai_working/<feature>-<date>/07-docs-checklist.md`
   - `progress.md`
 
 ## Objectives
@@ -64,7 +64,7 @@ If not committed, STOP and suggest `/git:commit`.
 [linter command from discovery]
 ```
 
-Create `ai_working/<feature>-<date>/09-cleanup-candidates.md` documenting:
+Create `ai_working/<feature>-<date>/08-cleanup-candidates.md` documenting:
 - Unused imports (with file:line)
 - Commented code blocks (with file:lines)
 - Unused functions/variables (with file:line)
@@ -119,7 +119,7 @@ Update `progress.md`:
 ## Output Files
 
 - Cleaned up code
-- `ai_working/<feature>-<date>/09-cleanup-candidates.md`
+- `ai_working/<feature>-<date>/08-cleanup-candidates.md`
 - Archived: `ai_archive/<feature>-<date>/` (if archived)
 - `progress.md` (updated)
 

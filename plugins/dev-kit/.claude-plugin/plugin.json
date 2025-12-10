@@ -15,8 +15,7 @@
     "./commands/new-feature/5-refactor.md",
     "./commands/new-feature/6-verify.md",
     "./commands/new-feature/7-document.md",
-    "./commands/new-feature/8-deploy-prep.md",
-    "./commands/new-feature/9-cleanup.md",
+    "./commands/new-feature/8-cleanup.md",
     "./commands/new-feature/status.md"
   ],
   "keywords": ["sdlc", "feature", "development", "workflow", "engineering"]
