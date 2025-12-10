@@ -119,7 +119,7 @@ _amp_get_local_sha() {
 
 _amp_get_remote_sha() {
     # Get remote SHA from GitHub API with timeout
-    local api_url="https://api.github.com/repos/microsoft/amplifier/commits/main"
+    local api_url="https://api.github.com/repos/microsoft/amplifier/commits/$AMP_BRANCH"
     local response
 
     response=$(curl -sS --max-time "$AMP_GITHUB_TIMEOUT" "$api_url" 2>/dev/null)
@@ -133,8 +133,29 @@ _amp_get_remote_sha() {
         fi
     fi
 
-    # Fallback to git fetch
+    # Fallback to git fetch if API failed
     _amp_log "GitHub API failed, falling back to git fetch"
+
+    if [[ -d "$AMP_AMPLIFIER_DIR/.git" ]]; then
+        pushd "$AMP_AMPLIFIER_DIR" > /dev/null 2>&1
+
+        # Fetch the remote branch quietly
+        if git fetch origin "$AMP_BRANCH" --quiet 2>&1; then
+            # Get the SHA of the remote branch
+            local remote_sha
+            remote_sha=$(git rev-parse --short=7 "origin/$AMP_BRANCH" 2>/dev/null)
+
+            if [[ -n "$remote_sha" ]]; then
+                popd > /dev/null 2>&1
+                echo "$remote_sha"
+                return 0
+            fi
+        fi
+
+        popd > /dev/null 2>&1
+    fi
+
+    # Both methods failed
     return 1
 }
 
@@ -207,10 +228,35 @@ _amp_quick_check() {
 
     if [[ "$local_sha" == "$remote_sha" ]]; then
         return 0  # Up to date
-    else
-        _amp_log "Quick check: Update available ($local_sha -> $remote_sha)"
-        return 1  # Update available
     fi
+
+    # SHAs differ - determine which is newer using git ancestry
+    if [[ -d "$AMP_AMPLIFIER_DIR/.git" ]]; then
+        pushd "$AMP_AMPLIFIER_DIR" > /dev/null 2>&1
+
+        # Check if local is ancestor of remote (local is behind)
+        if git merge-base --is-ancestor HEAD "origin/$AMP_BRANCH" 2>/dev/null; then
+            _amp_log "Quick check: Local behind remote ($local_sha -> $remote_sha)"
+            popd > /dev/null 2>&1
+            return 1  # Update available
+        fi
+
+        # Check if remote is ancestor of local (local is ahead - development)
+        if git merge-base --is-ancestor "origin/$AMP_BRANCH" HEAD 2>/dev/null; then
+            _amp_log "Quick check: Local ahead of remote ($local_sha, development mode)"
+            popd > /dev/null 2>&1
+            return 3  # Local is ahead (new return code for development)
+        fi
+
+        # Diverged (different branches)
+        _amp_log "Quick check: Local and remote diverged ($local_sha vs $remote_sha)"
+        popd > /dev/null 2>&1
+        return 4  # Diverged (new return code)
+    fi
+
+    # Can't determine relationship without git
+    _amp_log "Quick check: Version mismatch but can't determine relationship"
+    return 2  # Unknown
 }
 
 # ============================================================================
@@ -779,6 +825,22 @@ amp() {
                 echo ""
                 echo "Run 'amp update' to update"
                 return 1
+            elif [[ $result -eq 3 ]]; then
+                local local_sha
+                local_sha="$(_amp_get_local_sha)"
+                echo "🚀 Local ahead of remote ($local_sha)"
+                echo "   Running in development mode"
+                return 0
+            elif [[ $result -eq 4 ]]; then
+                local local_sha
+                local remote_sha
+                local_sha="$(_amp_get_local_sha)"
+                remote_sha="$(_amp_get_remote_sha)"
+                echo "⚠️  Local and remote have diverged"
+                echo "   Local: $local_sha | Remote: $remote_sha"
+                echo ""
+                echo "Run 'amp update' to sync (may require merge/rebase)"
+                return 2
             else
                 echo "⚠️  Cannot determine version status"
                 return 2

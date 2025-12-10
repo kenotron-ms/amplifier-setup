@@ -329,6 +329,145 @@ rm ~/.amp/.amp_last_check
 amp
 ```
 
+---
+
+## Health Check (`amp doctor`)
+
+**Check if your amp setup is healthy with a single command:**
+
+### Mac / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kenotron-ms/amplifier-setup/main/doctor.sh | bash
+```
+
+### What it checks
+
+1. **Prerequisites**
+   - ✅ Python 3.11+ installed
+   - ✅ Git installed
+   - ✅ uv package manager installed
+   - ✅ Claude Code installed
+
+2. **amp Installation**
+   - ✅ Scripts installed correctly (`amp.sh`, `amp-workspace.sh`)
+   - ✅ `amp` function can be loaded successfully
+   - ✅ `amp` configured in shell RC file (.bashrc/.zshrc)
+
+3. **Script Versions**
+   - ✅ Local scripts match remote versions
+   - ⚠️  Shows if updates are available
+
+4. **Repository Health**
+   - ✅ Main amplifier repo on correct branch (`amplifier-claude`)
+   - ✅ Main repo tracking correct upstream (`origin/amplifier-claude`, not `origin/main`)
+   - ✅ Main repo in sync with remote
+   - ✅ All worktrees on valid branch (`amplifier-claude` or `workspace/*`)
+   - ✅ All worktrees tracking correct upstream (`origin/amplifier-claude`)
+   - ✅ All worktrees pointing to correct origin
+   - ✅ All worktrees have correct Claude Code settings:
+     - `.claude/settings.local.json` exists
+     - `amplifier-setup` marketplace configured
+     - `git@amplifier-setup` plugin enabled
+
+5. **Git Plugin Verification** (NEW!)
+   - ✅ Git plugin installed correctly
+   - ✅ `/git:submit-pr` command exists
+   - ✅ All expected workflow steps present (8 steps)
+   - ✅ Key features: auto-merge, monitoring, autonomous fixing
+   - ✅ Continuous polling with `sleep + gh pr`
+
+6. **Summary Report**
+   - Shows counts: ✅ Success, ⚠️ Warnings, ❌ Errors
+   - Provides recommended actions
+
+### Sample Output
+
+```
+🏥 amp Doctor - Health Check
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Checking Prerequisites
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Python 3.12.3
+✅ Git installed: git version 2.43.0
+✅ uv installed: uv 0.5.0
+✅ Claude Code: 1.2.0
+
+🔧 Checking amp Installation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ AMP_HOME exists: /Users/you/.amp
+✅ amp.sh found
+✅ amp-workspace.sh found
+✅ amp function can be loaded successfully
+✅ amp configured in shell RC file
+
+📦 Checking Script Versions
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ amp.sh is up to date
+⚠️  amp-workspace.sh differs from remote version
+ℹ️  Run 'amp update' to sync
+
+🌿 Checking Amplifier Repository Branch
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Main repo on correct branch: amplifier-claude
+✅ Main repo upstream: origin/amplifier-claude ✓
+✅ Branch amplifier-claude exists on remote
+✅ Main repo is up to date: abc1234
+
+🌲 Checking Project Worktrees
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Found 2 worktree(s):
+
+  📁 my-project
+    ✅ Branch: workspace/Users-you-my-project (workspace branch) ✓
+    ✅ Upstream: origin/amplifier-claude ✓
+    ✅ Origin: git@github.com:username/amplifier.git ✓
+    ✅ In sync with main repo
+    ✅ Claude Code settings configured ✓
+
+  📁 another-project
+    ✅ Branch: workspace/Users-you-another-project (workspace branch) ✓
+    ✅ Upstream: origin/amplifier-claude ✓
+    ✅ Origin: git@github.com:username/amplifier.git ✓
+    ✅ In sync with main repo
+    ✅ Claude Code settings configured ✓
+
+🔌 Verifying Git Plugin via amp
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ git plugin installed and configured correctly
+✅ All expected features present (auto-merge, monitoring, autonomous fixing)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Health Check Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Success: 20
+⚠️  Warnings: 1
+❌ Errors: 0
+
+⚡ Your amp setup is working but has minor issues.
+
+Recommended action:
+  amp update
+```
+
+### When to run doctor
+
+- After installation to verify setup
+- When things aren't working as expected
+- Before asking for help (include output in issue)
+- After major system updates
+- Periodically to ensure health
+
+---
+
 ## Troubleshooting
 
 ### Check the Log
