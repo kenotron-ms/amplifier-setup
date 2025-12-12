@@ -18,13 +18,27 @@ _amp_configure_marketplace() {
         echo '{}' > "$settings_file"
     fi
 
+    # Detect local amplifier-setup directory
+    local local_setup_path=""
+    local use_local=false
+
+    # Check if AMP_LOCAL_SETUP_PATH is set (from reload-amp.sh)
+    if [[ -n "${AMP_LOCAL_SETUP_PATH:-}" ]] && [[ -d "$AMP_LOCAL_SETUP_PATH/.claude-plugin" ]]; then
+        local_setup_path="$AMP_LOCAL_SETUP_PATH"
+        use_local=true
+    fi
+
     # Add/update marketplace and plugins using python for reliable JSON manipulation
     if command -v python3 &>/dev/null; then
         python3 << EOF
 import json
 import sys
+import os
 
 settings_file = "$settings_file"
+use_local = "$use_local" == "true"
+local_setup_path = "$local_setup_path"
+
 try:
     with open(settings_file, 'r') as f:
         settings = json.load(f)
@@ -37,14 +51,29 @@ changed = False
 if 'extraKnownMarketplaces' not in settings:
     settings['extraKnownMarketplaces'] = {}
 
-if 'amplifier-setup' not in settings['extraKnownMarketplaces']:
+# Determine marketplace source (local directory or GitHub)
+if use_local:
+    marketplace_source = {
+        "source": "directory",
+        "path": local_setup_path
+    }
+    source_desc = f"local directory ({local_setup_path})"
+else:
+    marketplace_source = {
+        "source": "github",
+        "repo": "kenotron-ms/amplifier-setup"
+    }
+    source_desc = "GitHub (kenotron-ms/amplifier-setup)"
+
+# Always update marketplace source when it changes (not just when missing)
+# This allows switching between local dev and GitHub
+current_source = settings['extraKnownMarketplaces'].get('amplifier-setup', {}).get('source', {})
+if current_source != marketplace_source:
     settings['extraKnownMarketplaces']['amplifier-setup'] = {
-        "source": {
-            "source": "github",
-            "repo": "kenotron-ms/amplifier-setup"
-        }
+        "source": marketplace_source
     }
     changed = True
+    print(f"  🔄 Updated marketplace source to: {source_desc}")
 
 # Add enabledPlugins if not present
 if 'enabledPlugins' not in settings:
@@ -60,6 +89,11 @@ if 'git-flow@amplifier-setup' in settings['enabledPlugins']:
 # Enable git plugin from amplifier-setup marketplace
 if 'git@amplifier-setup' not in settings['enabledPlugins']:
     settings['enabledPlugins']['git@amplifier-setup'] = True
+    changed = True
+
+# Enable dev-kit plugin from amplifier-setup marketplace
+if 'dev-kit@amplifier-setup' not in settings['enabledPlugins']:
+    settings['enabledPlugins']['dev-kit@amplifier-setup'] = True
     changed = True
 
 if changed:
