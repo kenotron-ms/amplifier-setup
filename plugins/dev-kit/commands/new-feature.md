@@ -68,7 +68,7 @@ Individual phase commands:
 - `/new-feature:5-refactor` - Phase 5: Refactoring (TDD REFACTOR)
 - `/new-feature:6-verify` - Phase 6: Verification
 - `/new-feature:7-document` - Phase 7: Documentation
-- `/new-feature:8-cleanup` - Phase 8: Cleanup (optional)
+- `/new-feature:8-cleanup` - Phase 8: Cleanup (archive working docs)
 - `/new-feature:status` - Check progress
 
 ---
@@ -126,6 +126,8 @@ options:
 
 **Scenario B: Existing features found, NO $ARGUMENTS**
 
+**Even if only ONE feature exists, always ask for confirmation:**
+
 ```
 question: "Which feature would you like to work on?"
 header: "Feature"
@@ -133,10 +135,13 @@ multiSelect: false
 options:
   - label: "[Feature 1 Name] (XX% complete, YYYY-MM-DD)"
     description: "Resume this feature. Current phase: [Phase Name]"
-  - label: "[Feature 2 Name] (XX% complete, YYYY-MM-DD)"
+  - label: "[Feature 2 Name] (XX% complete, YYYY-MM-DD)" (if multiple features)
     description: "Resume this feature. Current phase: [Phase Name]"
   - (Other is automatically provided for new feature)
 ```
+
+**Do NOT assume user wants to resume just because only one feature exists.**
+**Always present choice, even for single feature.**
 
 **Scenario C: NO existing features, $ARGUMENTS provided**
 
@@ -228,7 +233,9 @@ ai_working/<feature-name>-YYYY-MM-DD/
 
 **Temporary**: All files in ai_working/ are temporary brainstorming/tracking documents
 
-**Permanent**: Final documentation created in Phase 7 per repository structure
+**Permanent**: Final documentation created in Phase 7 following repository's structure
+  - Content from 01, 02, 03 documented per repository patterns
+  - May be combined in one doc or separate docs (adapts to repository)
 
 ---
 

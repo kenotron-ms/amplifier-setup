@@ -10,8 +10,7 @@ This template shows the structure for each phase subcommand (1-9).
 - 5-refactor.md
 - 6-verify.md
 - 7-document.md
-- 8-deploy-prep.md
-- 9-cleanup.md
+- 8-cleanup.md
 
 ## Standard Structure for Each:
 

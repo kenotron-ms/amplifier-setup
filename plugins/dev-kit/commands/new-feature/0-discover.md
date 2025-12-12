@@ -103,9 +103,14 @@ Understand the repository structure, load project-specific guidance, identify pa
 ## Build & Deployment
 
 - **Build Command**: [command]
-- **Lint Command**: [command]
-- **Format Command**: [command]
+- **Type Check Command**: [tsc --noEmit, mypy, go vet, etc. - if separate]
+- **Lint Command**: [eslint, pylint, ruff, etc. - if separate]
+- **Format Command**: [prettier, black, gofmt, etc. - if separate]
+- **Quality Check Command**: [npm run check, make check, ./check.sh - unified command if exists]
+- **Test Command**: [already documented in Testing Infrastructure]
 - **Deployment**: [approach]
+
+**Note**: Some projects have unified quality check command (npm run check, make check) that runs type+lint+format together. Document if found.
 
 ## Dependencies & Constraints
 
@@ -118,6 +123,11 @@ Understand the repository structure, load project-specific guidance, identify pa
 - **Location**: [docs/, features/, in-module]
 - **Format**: [markdown, rst, etc.]
 - **Conventions**: [naming patterns]
+- **Locations by type**:
+  - Requirements: [path to requirements docs]
+  - Dev Design / Technical Design: [path to technical/architecture docs]
+  - UX Design: [path to UX/visual design docs, if separate]
+  - Test documentation: [path or combined with dev design]
 - **ADRs**: [Architecture Decision Records location]
 - **Examples**: [existing feature docs]
 
@@ -211,21 +221,23 @@ echo "Created: $WORK_DIR"
 
 The template defines ALL sections you MUST complete in `00-discovery.md`. Review it now to understand what information to gather.
 
-### Step 3: Read Project Guidance Files (REQUIRED)
+### Step 3: Parallel Discovery (RUN IN PARALLEL)
 
-**REQUIRED**: Must READ these files (not just search).
+**REQUIRED**: Run these discovery tasks in PARALLEL to expedite the phase.
 
-**Find and READ these files:**
+**Launch all agents and searches in parallel:**
+
+**Task 1: knowledge-archaeologist (Project Guidance)**
+
+Find and READ project guidance files first:
 ```bash
-# Find guidance files
 find . -maxdepth 3 -name "CLAUDE.md" -o -name "AGENTS.md" -o -name "README.md" \
   -o -name "MAINTENANCE.md" -o -name "CONTRIBUTING.md" -o -name "ARCHITECTURE.md"
 ```
 
-**For EACH file found, use Read tool to load it into context.**
+For EACH file found, use Read tool to load into context.
 
-**Then use knowledge-archaeologist agent:**
-
+Then launch agent:
 ```
 Task knowledge-archaeologist: "I've loaded the project guidance files. Extract and
 summarize key information:
@@ -235,21 +247,10 @@ summarize key information:
 - Testing requirements
 - Any files referenced with @ syntax (like @ai_context/IMPLEMENTATION_PHILOSOPHY.md)
 
-If guidance files reference other important files (with @ or explicit mentions),
-READ those files too and include their key points."
+If guidance files reference other files, READ those too and include their key points."
 ```
 
-**Wait for agent to complete.**
-
-**After agent completes:**
-- If agent found referenced files (like @ai_context/IMPLEMENTATION_PHILOSOPHY.md), READ those files too
-- Load all critical project rules and philosophies into context
-- Document findings from all read files
-
-### Step 4: Understand Repository Structure (REQUIRED AGENT)
-
-**REQUIRED**: Must use **Explore** agent.
-
+**Task 2: Explore (Repository Structure)**
 ```
 Task Explore: "Analyze repository structure to understand:
 - Directory organization and module layout
@@ -260,58 +261,41 @@ Task Explore: "Analyze repository structure to understand:
 - Documentation structure and location
 
 CRITICAL: Be purely OBSERVATIONAL. Document what exists, where it is,
-how it's currently structured. Do NOT make recommendations or suggest
-what to do. Just report facts about the current state.
+how it's currently structured. Do NOT make recommendations.
 
 thoroughness: medium"
 ```
 
-**Wait for agent to complete.** Document findings OBSERVATIONALLY.
+**Task 3: Infrastructure Discovery (Grep/Glob)**
 
-### Step 5: Discover Common Infrastructure (REQUIRED)
+Search for common infrastructure systems:
 
-**REQUIRED**: Must search for common infrastructure systems.
-
-Use **Grep** and **Glob** to search for:
-
-**Settings/Preferences System**:
+**Settings/Preferences:**
 ```bash
-# Search for settings, preferences, config systems
-grep -r "settings" --include="*.ts" --include="*.js" --include="*.py" src/ api/ backend/
-grep -r "preferences" --include="*.ts" --include="*.js" --include="*.py" src/ api/ backend/
-# Look for settings files
-find . -name "*settings*" -o -name "*preferences*" -o -name "*config*"
+grep -r "settings\|preferences" --include="*.ts" --include="*.js" --include="*.py" src/ api/ backend/
 ```
 
-**Authentication/User System**:
+**Auth/User:**
 ```bash
-grep -r "auth" --include="*.ts" --include="*.js" --include="*.py" src/ api/ backend/
-grep -r "user" --include="*.ts" --include="*.js" --include="*.py" src/ api/ backend/
+grep -r "auth\|user" --include="*.ts" --include="*.py" src/ backend/
 ```
 
-**Storage/Persistence Systems**:
+**Storage/Persistence:**
 ```bash
-grep -r "storage" --include="*.ts" --include="*.js" --include="*.py" src/ api/ backend/
-grep -r "persist" --include="*.ts" --include="*.js" --include="*.py" src/ api/ backend/
+grep -r "storage\|persist" --include="*.ts" --include="*.py" src/ backend/
 ```
 
-**State Management**:
+**State Management:**
 ```bash
-# For React: Zustand, Redux, Context
 grep -r "zustand\|redux\|createContext" --include="*.ts" --include="*.tsx" src/
 ```
 
-**API Patterns**:
+**API Patterns:**
 ```bash
-# Find API route definitions
 find . -name "*routes*" -o -name "*api*" | grep -E "\.(ts|js|py)$"
 ```
 
-**Document all findings** - you'll need them for the discovery document.
-
-### Step 6: Discover Feature-Specific Patterns (REQUIRED AGENT)
-
-**REQUIRED**: Must search for patterns relevant to this specific feature.
+**Task 4: Explore (Feature-Specific Patterns)**
 
 Extract keywords from feature description ($ARGUMENTS).
 
@@ -323,15 +307,24 @@ Find and DOCUMENT (observationally):
 - Components that exist in this area
 
 CRITICAL: Be purely OBSERVATIONAL. Document what exists, where it is, how it
-currently works. Do NOT make recommendations, do NOT suggest what to use,
-do NOT say 'should follow this pattern'. Just report facts.
+currently works. Do NOT make recommendations.
 
 thoroughness: medium"
 ```
 
-**Wait for agent to complete.** Document findings OBSERVATIONALLY (no recommendations).
+**WAIT for ALL parallel tasks to complete.**
 
-### Step 7: Create Discovery Document (FOLLOW TEMPLATE ABOVE)
+### Step 4: Synthesize Findings from Parallel Tasks
+
+**After ALL parallel tasks complete**, synthesize findings from:
+- Task 1 (knowledge-archaeologist): Project guidance and rules
+- Task 2 (Explore): Repository structure and patterns
+- Task 3 (Grep/Glob): Infrastructure systems found
+- Task 4 (Explore): Feature-specific patterns
+
+**Combine all findings** - you'll use them to fill the discovery document.
+
+### Step 5: Create Discovery Document (FOLLOW TEMPLATE ABOVE)
 
 **REQUIRED**: Must create `00-discovery.md` following the TEMPLATE section above.
 
@@ -380,9 +373,23 @@ thoroughness: medium"
 
 **Verification**: Check that discovery document has ALL template sections completed.
 
-### Step 8: Initialize Progress Tracking (REQUIRED)
+### Step 6: Initialize or Update Progress Tracking (REQUIRED)
 
-**REQUIRED**: Always create `ai_working/<feature-name>-<YYYY-MM-DD>/progress.md`:
+**Check if progress.md already exists:**
+
+```bash
+PROGRESS_FILE="ai_working/<feature>-<date>/progress.md"
+
+if [ -f "$PROGRESS_FILE" ]; then
+    echo "Progress file exists - UPDATING, not replacing"
+else
+    echo "Progress file doesn't exist - CREATING new"
+fi
+```
+
+**If progress.md DOES NOT exist (new feature):**
+
+Create new with initial template:
 
 ```markdown
 # Feature Progress: [Feature Name]
@@ -441,9 +448,67 @@ thoroughness: medium"
 - **Progress**: 0% → 5% (pending)
 ```
 
+**If progress.md ALREADY EXISTS (re-running discovery):**
+
+**CRITICAL**: Do NOT wipe out existing progress. UPDATE only, PRESERVE everything else.
+
+1. **Read existing progress.md** to get current state
+2. **Preserve:**
+   - All completed phases and their status
+   - Session history
+   - Current completion percentage
+   - Implementation chunks and details
+   - Everything except "Last Updated" and new session note
+3. **Update:**
+   - Last Updated: [Today's date]
+   - Add new session note:
+     ```
+     ### Session X (YYYY-MM-DD) - Discovery Update
+     - Re-ran discovery due to: [reason - e.g., "repo structure changed"]
+     - Updated 00-discovery.md with new findings
+     - Progress preserved: [current %]
+     ```
+4. **Do NOT:**
+   - ❌ Reset phase statuses to [ ]
+   - ❌ Reset completion to 5%
+   - ❌ Delete session history
+   - ❌ Replace progress.md with initial template
+
+**Example update (preserving existing progress):**
+```markdown
+# Feature Progress: [Feature Name]
+
+**Started**: 2025-01-05
+**Last Updated**: 2025-01-10 ← UPDATE THIS
+
+**Overall Completion**: 95% ← KEEP EXISTING, don't reset to 5%
+
+## Task Breakdown
+
+### High-Level Tasks
+1. [✓] Phase 0: Discovery (100%) ← KEEP existing status
+2. [✓] Phase 1: Requirements (100%)
+...
+8. [→] Phase 7: Documentation (in progress) ← PRESERVE current phase
+
+## Session History ← PRESERVE ALL and ADD new session
+
+### Session 1 (2025-01-05)
+- Completed Discovery phase
+- **Progress**: 0% → 5%
+
+### Session 2-4...
+[All preserved]
+
+### Session 5 (2025-01-10) - Discovery Update ← ADD THIS
+- Re-ran discovery due to repo structure change
+- Updated 00-discovery.md
+- Progress preserved: 95%
+```
+
 Progress tracking is created for ALL features to maintain consistency and enable easy resumption of work.
 
-### Step 9: Present Summary and Request Approval
+### Step 7: Present Summary and Request Approval
 
 **REQUIRED**: Present summary and WAIT for user approval.
 
@@ -479,7 +544,7 @@ Is the discovery complete and accurate?
 Your choice: _
 ```
 
-### Step 10: After User Approval
+### Step 8: After User Approval
 
 **ONLY after user approves:**
 

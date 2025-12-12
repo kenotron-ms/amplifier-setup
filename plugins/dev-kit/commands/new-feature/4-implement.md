@@ -161,7 +161,75 @@ If feature has chunks, update `progress.md` throughout implementation:
 **Status**: 60% complete
 ```
 
-### Step 5: VERIFY Final GREEN State
+### Step 5: Run Quality Checks (ITERATE UNTIL ALL PASS)
+
+**REQUIRED**: Quality checks must pass before proceeding. ITERATE until all pass.
+
+**Get commands from `00-discovery.md` → Build & Deployment section.**
+
+**LOOP until all quality checks pass:**
+
+**5.1. Run quality checks:**
+
+**If unified command:**
+```bash
+[quality-check-command]  # e.g., npm run check, make check
+```
+
+**If separate commands:**
+```bash
+[type-check-command]  # e.g., tsc --noEmit, mypy
+[lint-command]        # e.g., npm run lint, ruff
+[format-check-command] # e.g., prettier --check, black --check
+```
+
+**5.2. Check results:**
+
+**If ALL pass:**
+```
+✓ Type check: PASSED
+✓ Lint: PASSED
+✓ Format: PASSED
+
+Quality checks complete → Proceed to Step 6
+```
+
+**If ANY fail:**
+
+❌ **STOP - Do NOT proceed to Step 6**
+
+```
+Quality checks FAILED!
+
+Failures:
+- Type errors: [count]
+- Lint violations: [count]
+- Format issues: [count]
+
+You MUST fix these before proceeding to test verification.
+
+Fix now:
+1. Fix type errors in code
+2. Fix lint violations
+3. Run formatter: [format-command]
+
+After fixing, RETURN TO STEP 5.1 (re-run quality checks)
+```
+
+**5.3. After fixing, MUST re-run checks:**
+
+**REQUIRED**: Re-run quality checks from 5.1 to verify fixes worked.
+
+**Do NOT:**
+- ❌ Claim "fixed" without re-running checks
+- ❌ Move to Step 6 with failing quality checks
+- ❌ Skip quality checks
+
+**REPEAT Step 5.1-5.3 until ALL quality checks pass.**
+
+**Only when ALL pass → Proceed to Step 6 (test verification).**
+
+### Step 6: VERIFY Final GREEN State
 
 **CRITICAL**: Run complete test suite and verify 100% passing - NO EXCEPTIONS.
 
@@ -185,7 +253,7 @@ Coverage: XX% (target: 60% unit, 30% integration, 10% e2e)
 - [ ] ALL tests passing (100%, not 93% or 82%)
 - [ ] Coverage targets met (60/30/10 split)
 - [ ] No skipped or ignored tests
-- [ ] No flaky tests (run twice to confirm)
+- [ ] **No flaky tests** (run multiple times to confirm - see Step 6a if flakiness detected)
 
 **If ANY tests fail (even 1 test):**
 
@@ -331,7 +399,91 @@ Ready for refactoring phase.
 
 **Only proceed to Phase 5 if 100% GREEN - absolutely no exceptions!**
 
-### Step 6: Update Progress
+### Step 6a: Investigate Flaky Tests (If Detected)
+
+**If tests fail then pass on retry, this is a FLAKY test - investigate immediately and thoroughly.**
+
+**Flaky test detected:**
+```
+Test: [test name]
+Result: Failed on run 1, Passed on run 2
+This is FLAKY behavior - NOT acceptable.
+```
+
+**REQUIRED**: Investigate root cause before proceeding.
+
+**6a.1. Analyze the flaky test:**
+
+Common causes of flakiness:
+- Race conditions (parallel execution, async timing)
+- Improper cleanup (leftover data from previous run)
+- Shared state between tests
+- Timing dependencies (waitForTimeout instead of conditions)
+- External dependencies (network, filesystem)
+- Non-deterministic test data
+
+**6a.2. Review test code:**
+- Check Test Design Checklist from Phase 3:
+  - Proper cleanup in teardown?
+  - Test isolation (no shared state)?
+  - Condition-based waits (no arbitrary timeouts)?
+  - Test-scoped resources?
+
+**6a.3. Attempt to fix:**
+
+Try fixes:
+1. Add/improve cleanup in teardown
+2. Remove shared state
+3. Replace waitForTimeout with condition-based waits
+4. Use test-scoped resources (separate DB per test)
+5. Add proper async handling
+
+**6a.4. Verify fix:**
+
+Run flaky test multiple times (10x) to verify it's now deterministic:
+```bash
+for i in {1..10}; do
+  [test-command] [specific-flaky-test]
+done
+```
+
+If passes all 10 times → Fixed ✓
+
+**6a.5. If cannot fix after multiple attempts:**
+
+Ask user:
+```
+FLAKY TEST - Cannot fix after investigation
+
+Test: [test name]
+Behavior: Passes sometimes, fails sometimes
+Attempts made:
+- [What was tried]
+- [What was tried]
+
+Root cause suspected: [analysis]
+
+This is generally UNACCEPTABLE as flaky tests:
+- Hide real bugs
+- Break CI randomly
+- Indicate test quality issues
+
+Options:
+1. Let me investigate more (provide guidance)
+2. Skip this test temporarily (NOT RECOMMENDED)
+3. Mark test as known-flaky (add comment, create issue)
+
+Your choice: _
+```
+
+**Do NOT:**
+- ❌ Silently accept flaky tests
+- ❌ Claim 100% GREEN with flaky tests
+- ❌ Retry until pass and move on
+
+**Must either FIX or get USER approval to proceed with known flakiness.**
+
+### Step 7: Update Progress
 
 Update `progress.md`:
 - Mark Phase 4 complete: `[✓]`

@@ -59,7 +59,7 @@ Parse progress.md and show:
 
 ### Suggest Next Action
 
-Based on current phase:
+Based on current phase and completion status:
 
 ```
 Current Status:
@@ -84,6 +84,22 @@ Next Actions:
 3. Commit progress: /git:commit
 
 Blockers: None
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**If Phase 7 complete but Phase 8 not done:**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Phase 7 complete - Documentation done!
+
+Next: Archive working documents
+→ /new-feature:8-cleanup
+
+This will preserve development history:
+- All decisions and reasoning
+- Design alternatives considered
+- Complete session history
+
+Progress: 95% → 100% after archiving
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

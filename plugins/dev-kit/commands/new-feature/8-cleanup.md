@@ -1,30 +1,25 @@
 ---
-description: "Phase 8: Remove unused code safely (Optional)"
+description: "Phase 8: Archive working documents"
 category: development
-allowed-tools: TodoWrite, Read, Grep, Glob, Edit, Bash
+allowed-tools: TodoWrite, Read, Bash
 ---
 
-# New Feature - Phase 8: Cleanup (Optional)
+# New Feature - Phase 8: Cleanup
 
-Safely remove unused code, archive temporary files, verify no breakage.
-
-## ⚠️ WARNING: Destructive Operation
-
-User must commit all changes before running cleanup.
+Archive temporary working files to preserve feature development history.
 
 ## Prerequisites
 
 - Phase 7 (Documentation) should be complete
-- **CRITICAL**: User must have committed all changes
+- **RECOMMENDED**: User should commit all changes first
 - Required files:
-  - `ai_working/<feature>-<date>/07-docs-checklist.md`
+  - `ai_working/<feature>-<date>/`
   - `progress.md`
 
 ## Objectives
 
-- Remove unused code safely
-- Archive temporary working files
-- Verify no breakage from cleanup
+- Archive temporary working files for future reference
+- Clean up ai_working directory
 
 ---
 
@@ -33,102 +28,96 @@ User must commit all changes before running cleanup.
 Update TodoWrite:
 
 ```markdown
-- [ ] User confirmed changes committed
-- [ ] Scanned for cleanup candidates
-- [ ] User selected items to clean
-- [ ] Cleanup executed
-- [ ] Tests verified post-cleanup
+- [ ] User confirmed changes committed (recommended)
+- [ ] Working directory archived
+- [ ] Progress updated
 ```
 
-### Step 1: Safety Check
+### Step 1: Confirm Commit (Recommended)
 
-Ask user:
+**Recommended**: Commit before archiving to preserve clean state.
+
+Present to user:
 
 ```
-⚠️  CLEANUP IS DESTRUCTIVE
+Feature development complete! Ready to archive working documents.
 
-Have you committed all your changes?
-1. Yes, proceed with cleanup
-2. No, let me commit first (use /git:commit)
-3. Skip cleanup entirely
+Recommended: Commit all changes before archiving.
+
+Have you committed?
+1. Yes, committed - proceed with archiving
+2. Let me commit now (use /git:commit)
+3. Skip commit, just archive
+4. Skip archiving entirely
 ```
 
-If not committed, STOP and suggest `/git:commit`.
+If option 2, suggest `/git:commit`, then return here.
 
-### Step 2: Scan for Cleanup Candidates (REQUIRED)
+### Step 2: Archive Working Directory
 
-**REQUIRED**: Scan for unused code using project's linter.
+**Archive the working directory to preserve development history:**
 
 ```bash
-# Find unused imports, commented code, unused functions
-[linter command from discovery]
+# Create archive directory if doesn't exist
+mkdir -p ai_archive
+
+# Archive the working directory
+WORK_DIR="ai_working/<feature>-<date>"
+ARCHIVE_DIR="ai_archive/<feature>-<date>"
+
+# Move to archive (preserves all files)
+mv "$WORK_DIR" "$ARCHIVE_DIR"
+
+echo "✓ Archived: $ARCHIVE_DIR"
 ```
 
-Create `ai_working/<feature>-<date>/08-cleanup-candidates.md` documenting:
-- Unused imports (with file:line)
-- Commented code blocks (with file:lines)
-- Unused functions/variables (with file:line)
-- Temporary directory size
+**What's preserved:**
+- 00-discovery.md (project context and patterns)
+- 01-requirements.md (decisions and assumptions)
+- 02-design.md (alternatives considered, design assumptions)
+- 03-test-plan.md (test strategy)
+- 04-implementation.md (implementation notes)
+- 05-review.md (code review findings)
+- 06-manual-test-plan.md (user testing)
+- 07-docs-checklist.md (documentation tracking)
+- progress.md (complete session history)
 
-### Step 3: User Selection
+**Benefits of archiving:**
+- Future reference for why decisions were made
+- Onboarding new developers
+- Understanding feature evolution
+- Debugging context
 
-Present findings and ask what to clean:
-1. All unused imports
-2. All commented code blocks
-3. All unused functions
-4. Temporary working directory (archive or delete)
-5. Custom selection
-6. Nothing (skip cleanup)
+### Step 3: Update Progress (in Archive)
 
-### Step 4: Execute Cleanup (CAREFUL)
-
-For each selected item:
-1. Remove unused code
-2. Archive/delete temp directory
-3. **Document what was removed**
-
-### Step 5: VERIFY No Breakage (REQUIRED)
-
-**REQUIRED**: Run tests to confirm cleanup didn't break anything.
-
-```bash
-[test command with verbose]
-```
-
-**Must see:** All tests PASSING
-
-- [ ] All unit tests PASSING
-- [ ] All integration tests PASSING
-- [ ] All e2e tests PASSING
-
-**If any tests fail:**
-- ❌ Cleanup broke something
-- ❌ Revert cleanup: `git checkout .`
-- ❌ Review what was removed
-- ❌ Fix or skip that cleanup item
-
-### Step 6: Update Progress
-
-Update `progress.md`:
-- Mark Phase 9 complete: `[✓]`
+Update `ai_archive/<feature>-<date>/progress.md`:
+- Mark Phase 8 complete: `[✓]`
 - Update completion: `100%`
-- Add cleanup summary to session history
+- Add final session note:
+  ```
+  ### Session X (YYYY-MM-DD) - Feature Complete
+  - Archived working documents to ai_archive/
+  - Feature fully implemented, tested, and documented
+  - **Final Status**: 100% Complete
+  ```
 
 ---
 
 ## Output Files
 
-- Cleaned up code
-- `ai_working/<feature>-<date>/08-cleanup-candidates.md`
-- Archived: `ai_archive/<feature>-<date>/` (if archived)
-- `progress.md` (updated)
+- Archived working directory: `ai_archive/<feature>-<date>/`
+- Contains all development history and decisions
 
-## Feature Complete
+## Feature Complete!
 
-```bash
-# Commit cleanup
-/git:commit "chore: cleanup after feature completion"
+```
+🎉 Feature development complete!
 
-# Create PR
-/git:submit-pr
+Working documents archived to: ai_archive/<feature>-<date>/
+
+Next steps (if not done):
+- Final commit: /git:commit
+- Create PR: /git:submit-pr
+
+Feature is fully implemented, tested, and documented.
 ```
