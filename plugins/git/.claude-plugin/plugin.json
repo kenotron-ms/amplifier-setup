@@ -11,6 +11,6 @@
     "./commands/submit-pr.md"
   ],
   "skills": [
-    "./skills/pr-submission/SKILL.md"
+    "./skills/pr-submission"
   ]
 }

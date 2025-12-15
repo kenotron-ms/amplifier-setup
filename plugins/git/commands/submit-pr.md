@@ -338,11 +338,15 @@ Before creating the PR, discover repository-specific PR title and description st
    fi
    ```
 
+4. **After PR is created, IMMEDIATELY proceed to Step 7** - do NOT ask the user what to do next, do NOT pause, do NOT provide options. The workflow is fully autonomous.
+
 ### Step 7: Monitor PR Status Until Ready or Issues Detected
+
+**CRITICAL: This step ALWAYS runs immediately after Step 6 - NO USER CONFIRMATION NEEDED**
 
 **FULLY AUTONOMOUS - NO USER PROMPTS**
 
-After PR creation with auto-merge enabled, monitor the PR status by repeatedly checking and waiting:
+After PR creation, IMMEDIATELY begin monitoring the PR status by repeatedly checking and waiting:
 
 **Your mission**: Keep checking the PR status every 30 seconds until one of these conditions is met:
 
@@ -352,10 +356,14 @@ After PR creation with auto-merge enabled, monitor the PR status by repeatedly c
 
 **How to monitor**:
 
-1. Use `gh pr view [PR_NUMBER] --json state,statusCheckRollup,reviewDecision,mergeable` to check status
-2. Display the current status clearly when it changes (not every check)
-3. Wait 30 seconds using Bash `sleep 30` command
-4. Repeat until one of the exit conditions is met
+1. Use `gh pr view [PR_NUMBER] --json state,statusCheckRollup,reviewDecision,mergeable,comments` to check status
+2. Check for new comments since last check:
+   - Track the number of comments from previous check
+   - If comment count increased, fetch and display new comments: `gh pr view [PR_NUMBER] --json comments`
+   - Report new comments to user (reviewer name, timestamp, comment body)
+3. Display the current status clearly when it changes (not every check)
+4. Wait 30 seconds using Bash `sleep 30` command
+5. Repeat until one of the exit conditions is met
 
 **What to report**:
 - Current timestamp
@@ -363,6 +371,7 @@ After PR creation with auto-merge enabled, monitor the PR status by repeatedly c
 - Review status (PENDING/APPROVED/CHANGES_REQUESTED)
 - CI/CD check results (SUCCESS/PENDING/FAILURE)
 - Merge conflicts status (mergeable field: MERGEABLE/CONFLICTING/UNKNOWN)
+- New comments (if any): reviewer name, timestamp, comment text
 - What we're waiting for (approval, checks, conflict resolution, or ready to merge)
 
 **Exit conditions**:
@@ -404,13 +413,42 @@ MERGE CONFLICTS:
 
 YOUR MISSION:
 
-1. **Analyze what failed and why:**
-   - Read CI/CD logs from failed check URLs
+1. **Download and analyze CI artifacts FIRST (for CI failures):**
+
+   **CRITICAL: Many failures only reproduce in CI. Always download artifacts before theorizing.**
+
+   For each failed CI check:
+   ```bash
+   # Get the run ID for the failed check
+   RUN_ID=$(gh run list --workflow="<workflow-name>" --limit 1 --json databaseId -q '.[0].databaseId')
+
+   # Download all artifacts from the failed run
+   gh run download "$RUN_ID" --dir ci-artifacts/
+
+   # List what was downloaded
+   find ci-artifacts/ -type f
+   ```
+
+   **Examine downloaded artifacts:**
+   - **Log files**: Read complete error logs and stack traces
+   - **Test results**: Screenshots, videos, test output files
+   - **Build artifacts**: Build logs, compilation errors
+   - **Coverage reports**: Identify untested code paths
+   - **Error context files**: Any `error-context.md` or similar diagnostic files
+   - **Environment info**: CI environment details that differ from local
+
+   **Compare CI vs Local:**
+   - What's different in the CI environment? (Node version, OS, dependencies, environment variables)
+   - Does the error only happen in CI? (timing issues, environment-specific bugs)
+   - Are there CI-specific configurations? (different test settings, stricter rules)
+
+2. **Analyze what failed and why (using CI evidence):**
+   - Read the downloaded CI logs and artifacts thoroughly
    - Read review comments to understand requested changes
    - Check if merge conflicts exist (mergeable: CONFLICTING)
-   - Identify root causes of all failures
+   - Identify root causes based on ACTUAL CI evidence, not local assumptions
 
-2. **Fix all issues automatically:**
+3. **Fix all issues automatically:**
 
    **For merge conflicts:**
    - Pull latest changes from base branch: `git fetch origin && git merge origin/main` (or master)
@@ -419,12 +457,14 @@ YOUR MISSION:
    - Test that resolved code still works correctly
    - Mark conflicts as resolved
 
-   **For CI check failures:**
-   - If linting failures: Run linter and fix all issues
-   - If test failures: Fix failing tests or the code causing failures
-   - If type errors: Fix all type issues
-   - If build failures: Fix build errors
-   - Run `make check` or equivalent to verify fixes
+   **For CI check failures (using downloaded artifacts from Step 1):**
+   - If linting failures: Run linter and fix all issues based on CI logs
+   - If test failures: Fix failing tests or the code causing failures (reference test screenshots/videos if available)
+   - If type errors: Fix all type issues shown in CI build logs
+   - If build failures: Fix build errors using exact error messages from CI logs
+   - If CI-specific issues: Address environment differences, timing issues, or configuration problems revealed in artifacts
+   - Run the target project's verification commands to verify fixes locally
+   - Consider if fixes need CI-specific testing (e.g., different Node version, OS-specific issues)
 
    **For review change requests:**
    - Read each comment carefully
@@ -432,7 +472,7 @@ YOUR MISSION:
    - Address all reviewer feedback
    - Ensure changes match reviewer expectations
 
-3. **Commit fixes:**
+4. **Commit fixes:**
    ```bash
    cd "$PROJECT_DIR"
    git add -A
@@ -446,14 +486,20 @@ YOUR MISSION:
 Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.com>"
    ```
 
-4. **Push fixes:**
+5. **Push fixes:**
    ```bash
    git push origin $(git branch --show-current)
    ```
 
-5. **Report status in this EXACT format:**
+6. **Report status in this EXACT format:**
    ```
    FIX STATUS: [COMPLETE|FAILED]
+
+   CI ARTIFACTS ANALYZED:
+   - Run ID: {run id}
+     Status: ✅ Downloaded and analyzed | ⊘ No artifacts available | ❌ Could not download
+     Artifacts: {list of key artifacts examined: logs, screenshots, test results, etc.}
+     Key findings: {what the artifacts revealed about the failure}
 
    MERGE CONFLICTS RESOLVED:
    - Status: ✅ Resolved | ⊘ No conflicts | ❌ Could not resolve
@@ -480,6 +526,8 @@ Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.co
    ```
 
 CRITICAL RULES:
+- **Download CI artifacts FIRST** - Never theorize about CI failures without examining actual logs and artifacts
+- **Use evidence, not assumptions** - Base fixes on what the CI logs/artifacts show, not local behavior
 - Be thorough - fix everything you can
 - Be accurate - ensure fixes actually resolve the issues
 - Test your fixes - run checks before committing
@@ -574,18 +622,19 @@ Show the user:
 
 ## Important Notes
 
-- **FULLY AUTONOMOUS**: Zero user prompts or confirmations required
+- **FULLY AUTONOMOUS**: The ENTIRE workflow (Steps 1-8) is autonomous with zero user prompts or confirmations unless an unfixable issue is encountered
+- **NO ASKING THE USER**: NEVER ask "Would you like me to monitor?" or present options at any point - the workflow runs continuously from start to finish
 - **Automatic branch creation**: If on main/master, automatically creates a feature branch
 - **Smart merging strategy**: Attempts to enable auto-merge, but if not available, monitors and merges manually when checks pass
 - **Continuous monitoring**: Polls PR status every 30 seconds to detect when checks complete
-- **Autonomous issue fixing**: When CI fails or changes are requested, automatically fixes and re-pushes
+- **Autonomous issue fixing**: When CI fails or changes are requested, automatically fixes and re-pushes (up to 3 attempts)
 - **Fix-verify-merge loop**: Continuously monitors → fixes issues → verifies → merges (auto or manual)
-- **Maximum 3 retry attempts**: If issues can't be fixed after 3 tries, exits with error
+- **Maximum 3 retry attempts**: If issues can't be fixed after 3 tries, exits with error and requests human intervention
 - Never force push without explicit user confirmation
 - All actions are automatic - no user confirmation needed for commits, PR creation, monitoring, or merging
 - Documentation compliance is AUTOMATIC - never skip it
 - If compliance fails, PR submission is blocked until fixed
-- Process is designed for complete autonomy - submit PR and walk away, it will handle everything
+- **Process design**: Submit PR and walk away - the command handles everything autonomously until the PR is merged or an unfixable issue requires human intervention
 
 ## Optimization
 
