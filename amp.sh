@@ -752,7 +752,7 @@ _amp_execute() {
 
     local workspace_system_prompt="I'm working on the $project_name project. The project is located at $workspace_dir. The $worktree_path directory is the amplifier dev environment for this workspace.
 
-Please read @$workspace_dir/CLAUDE.md for project-specific guidance.
+Switch to this directory and read @$workspace_dir/CLAUDE.md for project-specific guidance. Make sure you follow the instructions there.
 
 Whenever we execute any tools, we should assume $workspace_dir is the root directory.
 
@@ -765,7 +765,7 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
 3. **Amplifier dev environment should fade into background**: The amplifier dev environment at $worktree_path is supporting infrastructure that should be invisible to the user. When discussing \"the project\" or \"your repository,\" always refer to $workspace_dir. The dev environment is just scaffolding—the user's repo is what truly matters."
 
     _amp_log "Launching claude from worktree $worktree_path with project dir $workspace_dir"
-
+  
     # Change to worktree directory and launch claude with project directory added
     pushd "$worktree_path" > /dev/null || {
         _amp_error "Failed to change to worktree directory" \
@@ -776,7 +776,7 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
     # Execute claude with workspace context as system prompt and add project directory
     # Export PROJECT_DIR so git plugin commands can use it
     export PROJECT_DIR="$workspace_dir"
-    claude --append-system-prompt "$workspace_system_prompt" --add-dir "$workspace_dir" "$@"
+    claude "$workspace_system_prompt" --add-dir "$workspace_dir"
 
     # Return to original directory after claude exits
     popd > /dev/null
