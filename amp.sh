@@ -776,7 +776,28 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
     # Execute claude with workspace context as system prompt and add project directory
     # Export PROJECT_DIR so git plugin commands can use it
     export PROJECT_DIR="$workspace_dir"
-    claude "$workspace_system_prompt" --add-dir "$workspace_dir" "$@"
+
+    # Check if resuming a session (don't send prompt if resuming)
+    # Covers: -c, --continue, -r, --resume (with or without session ID)
+    # Note: --fork-session is used WITH resume/continue, so catching those covers it
+    local is_resuming=false
+    for arg in "$@"; do
+        if [[ "$arg" == "-c" ]] || [[ "$arg" == --continue* ]] || \
+           [[ "$arg" == "-r" ]] || [[ "$arg" == --resume* ]]; then
+            is_resuming=true
+            break
+        fi
+    done
+
+    # Execute claude with or without initial prompt based on mode
+    if $is_resuming; then
+        # Resume mode: no initial prompt (resume handles its own context)
+        _amp_log "Resuming session (skipping workspace prompt)"
+        claude --add-dir "$workspace_dir" "$@"
+    else
+        # New session: include workspace context
+        claude "$workspace_system_prompt" --add-dir "$workspace_dir" "$@"
+    fi
 
     # Return to original directory after claude exits
     popd > /dev/null
