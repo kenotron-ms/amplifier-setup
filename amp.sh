@@ -776,7 +776,7 @@ Whenever we execute any tools, we should assume $workspace_dir is the root direc
     # Execute claude with workspace context as system prompt and add project directory
     # Export PROJECT_DIR so git plugin commands can use it
     export PROJECT_DIR="$workspace_dir"
-    claude "$workspace_system_prompt" --add-dir "$workspace_dir"
+    claude "$workspace_system_prompt" --add-dir "$workspace_dir" "$@"
 
     # Return to original directory after claude exits
     popd > /dev/null
