@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Duplicate context prompt on session resume**: Fixed issue where resuming a Claude Code session with `-r`/`--resume` or `-c`/`--continue` would send the workspace context prompt again, causing confusion and unnecessary context duplication. The `amp` command now detects resume flags and skips the initial prompt, allowing Claude to restore its own context cleanly.
 - **CLI arguments not passed through to Claude Code**: Fixed issue in `amp.sh` where additional command-line arguments (like session resume flags) were not being forwarded to the Claude CLI. Added `"$@"` to properly pass all arguments through, restoring session resume and other CLI features that rely on additional arguments.
 - **Development workflow improvements in `reload-amp.sh`**:
   - Now clears Claude Code shell snapshot cache to ensure updated scripts are used in active sessions
