@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Auto-merge on approval**: When your PR is approved and all checks pass, it automatically merges and cleans up branches for you
   - Complete hands-off workflow: Create branch → Commit → Ensure compliance → Monitor checks → Merge → Cleanup
 
+### Changed
+
+- **Enhanced merge conflict resolution in `/submit-pr`**: Improved Step 3 to include intelligent merge conflict handling before PR submission
+  - Automatically fetches and merges latest changes from base branch (main/master)
+  - Performs deep conflict analysis by examining commit history and intent from both branches
+  - Distinguishes between simple conflicts (auto-resolvable) and complex conflicts (requires human review)
+  - For simple conflicts: automatically resolves and commits with detailed reasoning
+  - For complex conflicts: provides comprehensive analysis with context from both branches, possible resolutions, and recommendations
+  - Downloads and analyzes CI artifacts before theorizing about failures to ensure evidence-based resolution
+  - Returns to monitoring loop after fixes (up to 3 attempts) for autonomous fix-verify-merge workflow
+
 ### Fixed
 
 - **Duplicate context prompt on session resume**: Fixed issue where resuming a Claude Code session with `-r`/`--resume` or `-c`/`--continue` would send the workspace context prompt again, causing confusion and unnecessary context duplication. The `amp` command now detects resume flags and skips the initial prompt, allowing Claude to restore its own context cleanly.

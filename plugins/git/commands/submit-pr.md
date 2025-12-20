@@ -95,7 +95,262 @@ If there are uncommitted changes:
    - Write a concise, descriptive commit message following conventional commits format
    - Create the commit immediately (no confirmation needed)
 
-### Step 3: Ensure Documentation Compliance (Automatic)
+### Step 3: Pull Latest Changes and Resolve Merge Conflicts
+
+**This step ensures the branch is up-to-date with the base branch before PR submission.**
+
+1. **Identify the base branch:**
+   ```bash
+   cd "$PROJECT_DIR"
+
+   # Determine if this repo uses main or master
+   if git rev-parse --verify origin/main >/dev/null 2>&1; then
+     BASE_BRANCH="main"
+   elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+     BASE_BRANCH="master"
+   else
+     echo "❌ Cannot determine base branch (neither main nor master exists)"
+     exit 1
+   fi
+
+   echo "📌 Base branch: $BASE_BRANCH"
+   ```
+
+2. **Fetch latest changes from remote:**
+   ```bash
+   cd "$PROJECT_DIR"
+   git fetch origin "$BASE_BRANCH"
+   echo "✅ Fetched latest changes from origin/$BASE_BRANCH"
+   ```
+
+3. **Check for merge conflicts:**
+   ```bash
+   cd "$PROJECT_DIR"
+
+   # Try to merge base branch (dry-run first to detect conflicts)
+   if git merge-base --is-ancestor origin/"$BASE_BRANCH" HEAD; then
+     echo "✅ Branch is already up-to-date with $BASE_BRANCH"
+   else
+     echo "🔄 Merging latest changes from origin/$BASE_BRANCH..."
+
+     # Attempt the merge
+     if git merge origin/"$BASE_BRANCH" --no-edit; then
+       echo "✅ Successfully merged $BASE_BRANCH with no conflicts"
+     else
+       echo "⚠️  Merge conflicts detected - analyzing before resolution..."
+       # Conflicts detected - proceed to analysis
+     fi
+   fi
+   ```
+
+4. **If conflicts exist, analyze them carefully using the Task tool:**
+
+   **Use Task tool with `subagent_type: 'general-purpose'`**
+
+   **Provide this detailed prompt:**
+
+   ```
+   TASK: Carefully analyze and resolve merge conflicts with full context understanding
+
+   CRITICAL: DO NOT jump to conclusions. Thoroughly analyze the conflicting changes by reviewing the actual commits and understanding the intent behind each change before proposing resolutions.
+
+   MERGE CONTEXT:
+   - Current branch: {output of: git branch --show-current}
+   - Base branch: {BASE_BRANCH}
+   - Conflicted files: {output of: git diff --name-only --diff-filter=U}
+
+   YOUR MISSION:
+
+   1. **List all conflicted files:**
+      ```bash
+      cd "$PROJECT_DIR"
+      git diff --name-only --diff-filter=U
+      ```
+
+   2. **For EACH conflicted file, perform deep analysis:**
+
+      **A. View the conflict markers:**
+      ```bash
+      cat [conflicted_file]
+      ```
+
+      **B. Understand what changed in OUR branch (feature branch):**
+      ```bash
+      # Get the merge base (common ancestor)
+      MERGE_BASE=$(git merge-base HEAD origin/$BASE_BRANCH)
+
+      # Show what we changed in our branch
+      git log $MERGE_BASE..HEAD --oneline -- [conflicted_file]
+      git diff $MERGE_BASE..HEAD -- [conflicted_file]
+      ```
+
+      **C. Understand what changed in THEIR branch (base branch):**
+      ```bash
+      # Show what changed in base branch since we diverged
+      git log $MERGE_BASE..origin/$BASE_BRANCH --oneline -- [conflicted_file]
+      git diff $MERGE_BASE..origin/$BASE_BRANCH -- [conflicted_file]
+      ```
+
+      **D. Read the actual commit messages and full diffs:**
+      ```bash
+      # Show full commit details for our changes
+      git log $MERGE_BASE..HEAD -p -- [conflicted_file]
+
+      # Show full commit details for their changes
+      git log $MERGE_BASE..origin/$BASE_BRANCH -p -- [conflicted_file]
+      ```
+
+      **E. Analyze the intent and context:**
+      - What problem was each side trying to solve?
+      - Are the changes related or independent?
+      - Is one change a refactor that affects the other?
+      - Did someone rename/move code that we modified?
+      - Are there breaking changes in either branch?
+      - Do the commit messages reveal important context?
+
+   3. **Categorize the conflict complexity:**
+
+      **SIMPLE CONFLICTS** (you should resolve automatically):
+      - Both sides made independent changes to adjacent lines
+      - One side added, other side modified nearby
+      - Formatting/whitespace conflicts
+      - Simple variable/function renames that don't change logic
+      - Non-overlapping feature additions
+
+      **COMPLEX CONFLICTS** (requires human judgment):
+      - Both sides modified the same function/logic differently
+      - Architectural changes that conflict (different design decisions)
+      - Breaking changes on one side that affect the other
+      - Semantic conflicts (code that technically merges but is logically wrong)
+      - Security or safety-critical code with conflicting approaches
+      - Unclear intent from commit messages
+
+   4. **For SIMPLE conflicts - resolve automatically:**
+
+      For each file with simple conflicts:
+
+      ```bash
+      # Edit the file to resolve conflicts intelligently
+      # Keep both changes if they're independent
+      # Choose the more complete/recent implementation if one supersedes the other
+      # Preserve the intent from both branches
+
+      # Mark as resolved
+      git add [conflicted_file]
+      ```
+
+      Document your resolution reasoning in the commit message.
+
+   5. **For COMPLEX conflicts - request human help:**
+
+      If ANY conflict is complex, STOP and report to the user:
+
+      ```
+      CONFLICT STATUS: REQUIRES_HUMAN_REVIEW
+
+      COMPLEX CONFLICTS DETECTED:
+
+      File: [conflicted_file]
+      Complexity: [Why this requires human judgment]
+
+      CONTEXT FROM OUR BRANCH (feature):
+      Commits:
+      {git log output showing our commits}
+
+      Changes:
+      {summarize what we changed and why based on commits}
+
+      CONTEXT FROM BASE BRANCH:
+      Commits:
+      {git log output showing base branch commits}
+
+      Changes:
+      {summarize what they changed and why based on commits}
+
+      CONFLICT ANALYSIS:
+      - Nature of conflict: [describe the conflicting changes]
+      - Why it's complex: [explain why this needs human judgment]
+      - Possible resolutions: [list 2-3 possible ways to resolve]
+      - Risks: [what could go wrong with each approach]
+
+      RECOMMENDATION:
+      [Your suggestion for how to resolve, with clear reasoning]
+
+      Please review the conflict and provide guidance on the correct resolution approach.
+      ```
+
+   6. **If all conflicts were simple and resolved, commit the merge:**
+      ```bash
+      cd "$PROJECT_DIR"
+      git commit -m "merge: resolve conflicts with $BASE_BRANCH
+
+   - Merged latest changes from $BASE_BRANCH
+   - Resolved conflicts in: {list files}
+   - {brief summary of how conflicts were resolved}
+
+   🤖 Generated with [Amplifier](https://github.com/microsoft/amplifier)
+
+   Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.com>"
+      ```
+
+   7. **Report status in this EXACT format:**
+      ```
+      MERGE STATUS: [COMPLETE|REQUIRES_HUMAN_REVIEW|FAILED]
+
+      CONFLICTS ANALYZED: {number}
+
+      SIMPLE CONFLICTS (auto-resolved):
+      - File: path/to/file
+        Analysis: {what changed in each branch}
+        Resolution: {how it was resolved and why}
+
+      COMPLEX CONFLICTS (need review):
+      - File: path/to/file
+        Analysis: {detailed analysis from step 5}
+
+      MERGE COMMIT: [Created|Not needed]
+      ```
+
+   CRITICAL RULES:
+   - ALWAYS analyze commit history and full diffs before resolving
+   - NEVER guess at the intent - read the actual commits
+   - NEVER resolve complex conflicts without human review
+   - When in doubt, ask for human guidance
+   - Document your reasoning clearly
+   - Test that the resolution makes sense logically (not just syntactically)
+   ```
+
+5. **Process the agent response:**
+
+   **If MERGE STATUS: COMPLETE:**
+   ```bash
+   echo "✅ Successfully merged and resolved conflicts with $BASE_BRANCH"
+   echo "   Proceeding to documentation compliance check..."
+   ```
+
+   **If MERGE STATUS: REQUIRES_HUMAN_REVIEW:**
+   ```bash
+   echo "⚠️  Complex merge conflicts detected that require human review"
+   echo ""
+   echo "{Display the conflict analysis from agent report}"
+   echo ""
+   echo "Please review the conflicts above and either:"
+   echo "  1. Resolve manually: git merge --continue after fixing"
+   echo "  2. Abort merge: git merge --abort"
+   echo ""
+   echo "After resolving, run /git:submit-pr again"
+   exit 1
+   ```
+
+   **If MERGE STATUS: FAILED:**
+   ```bash
+   echo "❌ Merge failed with errors"
+   echo ""
+   echo "{Show error details from agent report}"
+   exit 1
+   ```
+
+### Step 4: Ensure Documentation Compliance (Automatic)
 
 **This step ALWAYS runs to ensure documentation is never out of sync with code changes.**
 
@@ -261,7 +516,7 @@ Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.co
    exit 1
    ```
 
-### Step 4: Push to Remote
+### Step 5: Push to Remote
 
 1. Check if the branch exists on remote:
    ```bash
@@ -274,11 +529,11 @@ Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.co
    git push -u origin $(git branch --show-current)
    ```
 
-### Step 5: Discover Repository PR Standards
+### Step 6: Discover Repository PR Standards
 
 Before creating the PR, discover repository-specific PR title and description standards:
 
-1. **Standards are already loaded from Step 3** (CONTRIBUTING.md, MAINTENANCE.md, CLAUDE.md)
+1. **Standards are already loaded from Step 4** (CONTRIBUTING.md, MAINTENANCE.md, CLAUDE.md)
 
 2. **Analyze recent PRs for patterns:**
    ```bash
@@ -291,7 +546,7 @@ Before creating the PR, discover repository-specific PR title and description st
    - Common description sections
    - PR body structure
 
-### Step 6: Create Pull Request
+### Step 7: Create Pull Request
 
 1. Check if a PR already exists for this branch:
    ```bash
@@ -338,11 +593,11 @@ Before creating the PR, discover repository-specific PR title and description st
    fi
    ```
 
-4. **After PR is created, IMMEDIATELY proceed to Step 7** - do NOT ask the user what to do next, do NOT pause, do NOT provide options. The workflow is fully autonomous.
+4. **After PR is created, IMMEDIATELY proceed to Step 8** - do NOT ask the user what to do next, do NOT pause, do NOT provide options. The workflow is fully autonomous.
 
-### Step 7: Monitor PR Status Until Ready or Issues Detected
+### Step 8: Monitor PR Status Until Ready or Issues Detected
 
-**CRITICAL: This step ALWAYS runs immediately after Step 6 - NO USER CONFIRMATION NEEDED**
+**CRITICAL: This step ALWAYS runs immediately after Step 7 - NO USER CONFIRMATION NEEDED**
 
 **FULLY AUTONOMOUS - NO USER PROMPTS**
 
@@ -375,16 +630,16 @@ After PR creation, IMMEDIATELY begin monitoring the PR status by repeatedly chec
 - What we're waiting for (approval, checks, conflict resolution, or ready to merge)
 
 **Exit conditions**:
-- ✅ **MERGED**: PR successfully merged → go to Step 8
-- ⚠️  **Failed checks, changes requested, or conflicts**: → go to Step 7a (up to 3 times)
+- ✅ **MERGED**: PR successfully merged → go to Step 9
+- ⚠️  **Failed checks, changes requested, or conflicts**: → go to Step 8a (up to 3 times)
 - ❌ **CLOSED**: PR closed without merging → exit with error
 - 🎉 **All checks passed + no conflicts**:
-  - If `AUTO_MERGE_ENABLED=true`: Wait for GitHub auto-merge → go to Step 8
-  - If `AUTO_MERGE_ENABLED=false`: Merge manually → go to Step 7b
+  - If `AUTO_MERGE_ENABLED=true`: Wait for GitHub auto-merge → go to Step 9
+  - If `AUTO_MERGE_ENABLED=false`: Merge manually → go to Step 8b
 
-### Step 7a: Autonomously Address PR Issues
+### Step 8a: Autonomously Address PR Issues
 
-**This step only runs if failures or change requests were detected in Step 7**
+**This step only runs if failures or change requests were detected in Step 8**
 
 When issues are detected, use the Task tool to delegate fixing them:
 
@@ -559,10 +814,10 @@ else
 fi
 ```
 
-**After fixes are pushed, automatically return to Step 7** to continue monitoring. This creates an autonomous loop:
+**After fixes are pushed, automatically return to Step 8** to continue monitoring. This creates an autonomous loop:
 - Monitor → Detect issues → Fix issues → Push → Monitor → Detect passing → Merge
 
-### Step 7b: Manual Merge When Checks Pass
+### Step 8b: Manual Merge When Checks Pass
 
 **This step only runs if auto-merge is not enabled/available AND all checks have passed**
 
@@ -576,20 +831,20 @@ When auto-merge is not available in the repository but all checks are green and 
 
 4. **If merge fails**: Report the error and provide the PR URL for manual intervention
 
-After successful merge, proceed to Step 8 for cleanup.
+After successful merge, proceed to Step 9 for cleanup.
 
-### Step 8: Cleanup After Merge
+### Step 9: Cleanup After Merge
 
-**This step runs after the PR has been merged (either via GitHub auto-merge or manual merge in Step 7b)**
+**This step runs after the PR has been merged (either via GitHub auto-merge or manual merge in Step 8b)**
 
 Once the PR is confirmed as merged, clean up the local workspace:
 
-**If auto-merge was enabled (coming from Step 7 monitoring)**:
+**If auto-merge was enabled (coming from Step 8 monitoring)**:
 1. Wait for GitHub to complete the auto-merge by polling the PR state
 2. When state becomes "MERGED" → proceed to cleanup below
 3. If state becomes "CLOSED" → exit with error
 
-**If manual merge was performed (coming from Step 7b)**:
+**If manual merge was performed (coming from Step 8b)**:
 - Skip waiting, PR is already merged → proceed directly to cleanup below
 
 **Cleanup local branches**:
@@ -603,7 +858,7 @@ Once the PR is confirmed as merged, clean up the local workspace:
 - Confirmation that you're back on base branch
 - Latest changes pulled
 
-### Step 9: Report Final Result
+### Step 10: Report Final Result
 
 Show the user:
 - PR URL
@@ -622,7 +877,7 @@ Show the user:
 
 ## Important Notes
 
-- **FULLY AUTONOMOUS**: The ENTIRE workflow (Steps 1-8) is autonomous with zero user prompts or confirmations unless an unfixable issue is encountered
+- **FULLY AUTONOMOUS**: The ENTIRE workflow (Steps 1-9) is autonomous with zero user prompts or confirmations unless an unfixable issue is encountered
 - **NO ASKING THE USER**: NEVER ask "Would you like me to monitor?" or present options at any point - the workflow runs continuously from start to finish
 - **Automatic branch creation**: If on main/master, automatically creates a feature branch
 - **Smart merging strategy**: Attempts to enable auto-merge, but if not available, monitors and merges manually when checks pass
